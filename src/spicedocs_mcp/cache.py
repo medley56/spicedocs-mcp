@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import shutil
 import time
 from collections import deque
 from datetime import datetime, timezone
@@ -215,16 +216,15 @@ def download_documentation(base_url: str, cache_dir: Path) -> None:
     # Create temporary download directory
     temp_dir = cache_dir.parent / ".spicedocs-download-tmp"
     if temp_dir.exists():
-        import shutil
         logger.warning(f"Removing incomplete download: {temp_dir}")
         shutil.rmtree(temp_dir)
 
     temp_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        # Check disk space (require 100MB)
-        stat = os.statvfs(temp_dir)
-        available_mb = (stat.f_bavail * stat.f_frsize) / (1024 * 1024)
+        # Check disk space (require 100MB) - using shutil.disk_usage for cross-platform support
+        disk_usage = shutil.disk_usage(temp_dir)
+        available_mb = disk_usage.free / (1024 * 1024)
         if available_mb < 100:
             raise OSError(f"Insufficient disk space: {available_mb:.1f} MB available, 100 MB required")
 
@@ -327,7 +327,6 @@ def download_documentation(base_url: str, cache_dir: Path) -> None:
 
         # Atomic rename to final location
         if cache_dir.exists():
-            import shutil
             shutil.rmtree(cache_dir)
 
         temp_dir.rename(cache_dir)
@@ -336,7 +335,6 @@ def download_documentation(base_url: str, cache_dir: Path) -> None:
     except Exception as e:
         # Clean up temp directory on failure
         if temp_dir.exists():
-            import shutil
             shutil.rmtree(temp_dir)
         raise
 
