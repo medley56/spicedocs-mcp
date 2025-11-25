@@ -1,0 +1,15 @@
+.venv
+.vscode
+.archive_index.db
+.mypy_cache
+__pycache__/
+*.pyc
+.DS_Store
+.idea/
+.env
+.env.*
+.claude
+uv.lock
+core
+naif.jpl.nasa.gov
+ROADMAP.md

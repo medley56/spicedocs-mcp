@@ -1,0 +1,55 @@
+{
+  "name": "SPICE Docs MCP Server Development Container",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "runArgs": ["--cap-add=NET_ADMIN", "--cap-add=NET_RAW"],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.debugpy",
+        "ms-python.vscode-python-envs",
+        "ms-python.mypy-type-checker",
+        "ms-vscode.test-adapter-converter",
+        "ms-python.pytest",
+        "charliermarsh.ruff",
+        "tamasfe.even-better-toml",
+        "redhat.vscode-xml",
+        "github.copilot",
+        "github.copilot-chat",
+        "anthropic.claude-code"
+      ],
+      "settings": {
+        "dev.containers.copyGitConfig": true,
+        "python.terminal.activateEnvironment": false,
+        "python-envs.terminal.autoActivationType": "command",
+        "python.testing.pytestEnabled": true,
+        "python.testing.unittestEnabled": false,
+        "python.testing.pytestArgs": ["-s", "."],
+        "files.associations": {
+          "*.xtce": "xml"
+        },
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.organizeImports.ruff": "explicit"
+        },
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff"
+        },
+        "ruff.organizeImports": true,
+        "ruff.fixAll": true
+      }
+    }
+  },
+  "remoteUser": "root",
+  "remoteEnv": {
+    "NODE_OPTIONS": "--max-old-space-size=4096",
+    "CLAUDE_CONFIG_DIR": "/root/.claude",
+    "POWERLEVEL9K_DISABLE_GITSTATUS": "true",
+    "COMMIT_GPGSIGN": "true",
+    "TAG_GPGSIGN": "true"
+  },
+  "postCreateCommand": "/usr/local/bin/setup-dev-environment.sh"
+}
