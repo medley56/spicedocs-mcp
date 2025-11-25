@@ -13,6 +13,13 @@ dependencies = [
     "fastmcp>=2.0.0,<3.0.0",
 ]
 
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0.0,<9.0.0",
+    "pytest-asyncio>=0.23.0,<1.0.0",
+    "pytest-timeout>=2.3.0,<3.0.0",
+]
+
 [project.scripts]
 spicedocs-mcp = "spicedocs_mcp.server:main"
 

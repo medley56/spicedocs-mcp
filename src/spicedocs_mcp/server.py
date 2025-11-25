@@ -150,8 +150,9 @@ async def search_archive(query: str, limit: int = 10) -> str:
     if fts_available:
         # Use FTS5 search
         cursor = db_conn.execute("""
-            SELECT path, title, url, snippet(pages_fts, 1, '<mark>', '</mark>', '...', 64) as snippet
+            SELECT p.path, p.title, p.url, snippet(pages_fts, 1, '<mark>', '</mark>', '...', 64) as snippet
             FROM pages_fts
+            JOIN pages p ON pages_fts.rowid = p.id
             WHERE pages_fts MATCH ?
             ORDER BY bm25(pages_fts)
             LIMIT ?
