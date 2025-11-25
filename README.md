@@ -21,18 +21,62 @@ The SpiceDocs MCP server indexes and provides full-text search capabilities acro
 - Support for both relative and absolute paths within the archive
 - Link extraction for navigation between related pages
 
-## Requirements
+## Quick Start
+
+The easiest way to use SpiceDocs MCP is with Claude Desktop and `uvx`:
+
+### Prerequisites
 
 - Python 3.10 or higher
-- uv (for dependency management)
-- Local copy of NAIF SPICE documentation
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) package manager
 
-## Installation
+### Installation with Claude Desktop
+
+1. Install uv if you haven't already:
+
+```bash
+# On macOS and Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# On Windows
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+2. Add SpiceDocs MCP to your Claude Desktop configuration:
+
+**macOS/Linux:** `~/.config/Claude/claude_desktop_config.json`
+**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "spicedocs": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/medley56/spicedocs-mcp",
+        "spicedocs-mcp",
+        "src/spicedocs_mcp/naif.jpl.nasa.gov"
+      ]
+    }
+  }
+}
+```
+
+3. Restart Claude Desktop
+
+That's it! Claude will now have access to SPICE documentation through the MCP server. The documentation archive is bundled with the repository, so no additional setup is needed.
+
+## Advanced Installation
+
+### For Development
+
+If you want to modify or extend the server:
 
 1. Clone this repository:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/medley56/spicedocs-mcp
 cd spicedocs-mcp
 ```
 
@@ -42,7 +86,9 @@ cd spicedocs-mcp
 uv sync
 ```
 
-3. Ensure you have a local copy of the NAIF SPICE documentation. The server expects a directory structure similar to:
+### Documentation Archive Structure
+
+The server expects a directory structure similar to:
 
 ```text
 archive_directory/
@@ -63,31 +109,24 @@ archive_directory/
 
 ## Running the Server
 
-### Standalone Mode
+### For Development/Testing
 
-Run the server directly with the path to your documentation archive:
+If you've cloned the repository and want to run the server locally:
 
 ```bash
-uv run spicedocs-mcp /path/to/spice/documentation
+# From the project root
+uv run spicedocs-mcp src/spicedocs_mcp/naif.jpl.nasa.gov
 ```
 
 Or using Python directly:
 
 ```bash
-uv run python src/spicedocs_mcp/server.py /path/to/spice/documentation
+uv run python src/spicedocs_mcp/server.py src/spicedocs_mcp/naif.jpl.nasa.gov
 ```
 
-### Using with Claude Desktop
+### Using with Claude Desktop (Development Mode)
 
-To use this server with Claude Desktop, add it to your Claude Desktop configuration file:
-
-**Location of config file:**
-
-- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-- Linux: `~/.config/Claude/claude_desktop_config.json`
-
-**Configuration:**
+If you've cloned the repository and want to use your local version with Claude Desktop:
 
 ```json
 {
@@ -97,17 +136,15 @@ To use this server with Claude Desktop, add it to your Claude Desktop configurat
       "args": [
         "run",
         "spicedocs-mcp",
-        "/absolute/path/to/spice/documentation"
+        "src/spicedocs_mcp/naif.jpl.nasa.gov"
       ],
-      "cwd": "/absolute/path/to/spicedocs-mcp"
+      "cwd": "/absolute/path/to/your/cloned/spicedocs-mcp"
     }
   }
 }
 ```
 
-Replace the paths with your actual installation locations.
-
-After updating the configuration, restart Claude Desktop to load the server.
+Replace `/absolute/path/to/your/cloned/spicedocs-mcp` with the actual path to your cloned repository.
 
 ## Usage Examples
 
