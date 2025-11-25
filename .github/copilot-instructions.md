@@ -1,6 +1,6 @@
 # SpiceDocs MCP Server Development Guide
 
-This document provides comprehensive instructions for developing the SpiceDocs MCP server using Claude Code.
+This document provides comprehensive instructions for developing the SpiceDocs MCP server using GitHub Copilot.
 
 ## Project Overview
 
@@ -36,7 +36,9 @@ spicedocs-mcp/
 │   ├── Dockerfile               # Development container setup
 │   ├── devcontainer.json        # VSCode devcontainer config
 │   ├── setup-dev-environment.sh # Post-create setup script
-│   └── CLAUDE.md                # This file
+│   └── CLAUDE.md                # Claude Code instructions
+├── .github/
+│   └── copilot-instructions.md  # This file
 ├── pyproject.toml               # uv project configuration
 ├── uv.lock                      # uv dependency lock file
 ├── README.md                    # User-facing documentation
@@ -52,9 +54,9 @@ This project uses a VSCode devcontainer with:
 - uv package manager pre-installed
 - SQLite3 with FTS5 support
 - Git, gh CLI, and development tools
-- Claude Code extension pre-configured
+- GitHub Copilot extensions pre-configured
 
-The container automatically runs [setup-dev-environment.sh](./setup-dev-environment.sh) on creation, which:
+The container automatically runs [setup-dev-environment.sh](../.devcontainer/setup-dev-environment.sh) on creation, which:
 - Installs Python dependencies via `uv sync`
 - Configures Git authentication (SSH/HTTPS)
 - Sets up GPG commit signing if configured
@@ -532,10 +534,10 @@ See [ROADMAP.md](../ROADMAP.md) for planned features:
 
 ## Getting Help
 
-When asking Claude Code for help with this project:
+When working with GitHub Copilot on this project:
 
-1. Reference specific files and line numbers (e.g., "in server.py:136")
-2. Include error messages and log output
+1. Reference specific files and line numbers in your prompts (e.g., "in server.py:136")
+2. Include error messages and log output when debugging
 3. Describe what you've already tried
 4. Ask specific questions rather than general requests
 
@@ -545,16 +547,17 @@ Examples:
 - "The extract_links function isn't resolving relative paths correctly. Can you review the logic at server.py:344?"
 - "I'm getting 'Database not initialized' errors. What initialization sequence should I check?"
 
-## Notes for Claude Code
+## Notes for GitHub Copilot
 
-When working on this project:
+When generating code suggestions for this project:
 
-- Always read [server.py](../src/spicedocs_mcp/server.py) before making changes
-- Test changes manually before suggesting them
+- Always consider the existing code in [server.py](../src/spicedocs_mcp/server.py) before making changes
 - Keep the single-file architecture (don't split into multiple modules)
 - Maintain backward compatibility with existing MCP tool signatures
 - Use path traversal protection for all file operations
 - Log informational messages to stderr using the logger
 - Return descriptive error strings from MCP tools (don't raise exceptions)
 - Keep dependencies minimal (only add if truly necessary)
-- Update [README.md](../README.md) when adding new features or changing usage
+- Suggest updating [README.md](../README.md) when adding new features or changing usage
+- Follow the established patterns for async functions and type hints
+- Use Google-style docstrings consistently
