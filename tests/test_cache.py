@@ -27,9 +27,7 @@ def test_get_cache_dir_default(monkeypatch):
 
     cache_dir = get_cache_dir()
     # The actual directory structure depends on platformdirs implementation
-    # On Linux: ~/.cache/spicedocs-mcp/spicedocs
-    # On Windows: %LOCALAPPDATA%\spicedocs\spicedocs-mcp\Cache
-    # Check that the path contains both 'spicedocs' and 'spicedocs-mcp'
+    # but it should always contain both 'spicedocs' and 'spicedocs-mcp'
     cache_dir_str = str(cache_dir).lower()
     assert "spicedocs" in cache_dir_str
     assert "spicedocs-mcp" in cache_dir_str
