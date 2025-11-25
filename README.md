@@ -37,10 +37,18 @@ The SpiceDocs MCP server indexes and provides full-text search capabilities acro
 To check if FTS5 is available on your system:
 
 ```bash
-python3 -c "import sqlite3; conn = sqlite3.connect(':memory:'); conn.execute('CREATE VIRTUAL TABLE t USING fts5(c)'); print('FTS5 is available')"
+python3 -c "
+import sqlite3
+conn = sqlite3.connect(':memory:')
+try:
+    conn.execute('CREATE VIRTUAL TABLE t USING fts5(c)')
+    print('FTS5 is available')
+except Exception:
+    print('FTS5 is not available')
+"
 ```
 
-If you see an error, your SQLite doesn't support FTS5. The server will still work, but search will be slower.
+If the command shows "FTS5 is not available", your SQLite doesn't support FTS5. The server will still work, but search will be slower.
 
 ## Quick Start
 
@@ -315,8 +323,8 @@ Built using:
 
 If you see "FTS5 not available, using basic search" in the logs:
 
-- **Linux (Debian/Ubuntu)**: The system SQLite should include FTS5 by default with Python 3.10+
-- **macOS**: FTS5 is included with the system SQLite
+- **Linux (Debian/Ubuntu)**: FTS5 is typically included with Python 3.10+ on most distributions
+- **macOS**: FTS5 is usually included with the system SQLite
 - **Windows**: FTS5 is typically included with Python's bundled SQLite
 
 If FTS5 is missing, you can still use the server - it will fall back to basic LIKE-based search which is slower but functional.
