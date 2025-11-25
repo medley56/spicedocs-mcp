@@ -224,9 +224,9 @@ This uses the `get_archive_stats` tool to get overview information.
 ### Cache Location
 
 Documentation is cached in platform-appropriate directories:
-- **Linux**: `~/.cache/spicedocs-mcp/spicedocs`
-- **macOS**: `~/Library/Caches/spicedocs-mcp/spicedocs`
-- **Windows:** `%LOCALAPPDATA%\spicedocs-mcp\spicedocs\Cache`
+- **Linux**: `~/.cache/spicedocs-mcp`
+- **macOS**: `~/Library/Caches/spicedocs-mcp`
+- **Windows**: `%LOCALAPPDATA%\spicedocs\spicedocs-mcp\Cache`
 
 To see your cache location:
 ```bash

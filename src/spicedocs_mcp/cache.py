@@ -27,9 +27,9 @@ def get_cache_dir() -> Path:
     Get platform-appropriate cache directory.
 
     Returns platform-specific cache directory:
-    - Linux: ~/.cache/spicedocs-mcp/spicedocs
-    - macOS: ~/Library/Caches/spicedocs-mcp/spicedocs
-    - Windows: %LOCALAPPDATA%\\spicedocs-mcp\\spicedocs\\Cache
+    - Linux: ~/.cache/spicedocs-mcp
+    - macOS: ~/Library/Caches/spicedocs-mcp
+    - Windows: %LOCALAPPDATA%\\spicedocs\\spicedocs-mcp\\Cache
 
     Can be overridden with SPICEDOCS_CACHE_DIR environment variable.
     """
