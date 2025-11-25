@@ -242,7 +242,7 @@ async def get_page(path: str, include_raw: bool = False) -> str:
     Returns:
         Page content with title, size, and text (optionally raw HTML)
     """
-    if not archive_path:
+    if archive_path is None:
         return "Error: Archive path not initialized"
     
     # Ensure path is safe and within archive
@@ -347,7 +347,7 @@ async def extract_links(path: str, internal_only: bool = True) -> str:
     Returns:
         List of links found in the page
     """
-    if not archive_path:
+    if archive_path is None:
         return "Error: Archive path not initialized"
     
     # Validate path
@@ -433,7 +433,7 @@ async def get_archive_stats() -> str:
     Returns:
         Archive statistics including file counts, sizes, and indexed pages
     """
-    if not archive_path or db_path is None:
+    if archive_path is None or db_path is None:
         return "Error: Archive not initialized"
     
     try:

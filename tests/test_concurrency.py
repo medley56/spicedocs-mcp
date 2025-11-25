@@ -22,9 +22,10 @@ async def test_concurrent_searches(client):
     # Execute all searches concurrently
     results = await asyncio.gather(*[search(q) for q in queries])
     
-    # All searches should complete without errors
+    # All searches should complete without errors (either find results or report "No results")
     for i, result in enumerate(results):
-        assert "Error" not in result or "No results" in result, f"Search '{queries[i]}' failed: {result}"
+        has_error = "Error" in result and "No results" not in result
+        assert not has_error, f"Search '{queries[i]}' returned unexpected error: {result}"
 
 
 async def test_concurrent_get_page(client):
@@ -107,10 +108,11 @@ async def test_concurrent_mixed_operations(client):
     # Execute all tasks concurrently
     results = await asyncio.gather(*tasks)
     
-    # All operations should succeed
+    # All operations should succeed (no unexpected errors)
     for i, result in enumerate(results):
         content = result.content[0].text
-        assert "Error" not in content or "No results" in content, f"Task {i} failed: {content}"
+        has_error = "Error" in content and "No results" not in content
+        assert not has_error, f"Task {i} returned unexpected error: {content}"
 
 
 async def test_rapid_successive_searches(client):
@@ -122,7 +124,8 @@ async def test_rapid_successive_searches(client):
         result = await client.call_tool("search_archive", {"query": query, "limit": 5})
         content = result.content[0].text
         # Should either find results or report no results (not error)
-        assert "Error" not in content or "No results" in content, f"Search {i} failed: {content}"
+        has_error = "Error" in content and "No results" not in content
+        assert not has_error, f"Search {i} returned unexpected error: {content}"
 
 
 def test_get_connection_returns_unique_connections(test_archive):
