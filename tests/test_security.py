@@ -79,7 +79,8 @@ async def test_extract_links_normalizes_paths_cross_platform(client):
     normalized using pathlib rather than os.path.normpath, ensuring
     consistent behavior on both Windows and Unix systems.
 
-    Relates to: GitHub issue for Windows path handling fix.
+    The fix uses Path.resolve() instead of os.path.normpath because the latter
+    converts forward slashes to backslashes on Windows, breaking URL path handling.
     """
     # The deeply nested page has links with ../../ patterns
     result = await client.call_tool("extract_links", {
