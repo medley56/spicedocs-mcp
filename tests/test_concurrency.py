@@ -128,8 +128,13 @@ async def test_rapid_successive_searches(client):
         assert not has_error, f"Search {i} returned unexpected error: {content}"
 
 
-def test_get_connection_returns_unique_connections(test_archive):
+def test_get_connection_returns_unique_connections(test_archive, tmp_path, monkeypatch):
     """Test that get_connection() returns unique connections."""
+    # Set cache directory to temp path for test isolation
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    monkeypatch.setenv("SPICEDOCS_CACHE_DIR", str(cache_dir))
+
     server_module.archive_path = test_archive
     init_database(test_archive)
     
@@ -168,8 +173,13 @@ def test_get_connection_returns_unique_connections(test_archive):
         server_module.fts_available = False
 
 
-def test_connection_context_manager(test_archive):
+def test_connection_context_manager(test_archive, tmp_path, monkeypatch):
     """Test that connections work properly with context managers."""
+    # Set cache directory to temp path for test isolation
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    monkeypatch.setenv("SPICEDOCS_CACHE_DIR", str(cache_dir))
+
     server_module.archive_path = test_archive
     init_database(test_archive)
     

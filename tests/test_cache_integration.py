@@ -39,23 +39,30 @@ def test_cli_cache_dir(tmp_path, monkeypatch):
     assert "custom_cache" in result.stdout
 
 
-def test_backward_compatibility_with_archive_path(tmp_path):
-    """Test that providing archive path still works (backward compatibility)."""
-    # Create a minimal archive
-    archive_dir = tmp_path / "archive"
-    doc_dir = archive_dir / "pub" / "naif" / "toolkit_docs" / "C"
-    doc_dir.mkdir(parents=True)
+def test_archive_path_argument_rejected():
+    """Test that providing archive path argument shows error with migration message."""
+    result = subprocess.run(
+        [sys.executable, "-m", "spicedocs_mcp.server", "/some/path"],
+        capture_output=True,
+        text=True
+    )
 
-    # Create some HTML files
-    (doc_dir / "index.html").write_text("<html><body>Test</body></html>")
-    (doc_dir / "page1.html").write_text("<html><body>Page 1</body></html>")
+    assert result.returncode == 1
+    assert "Custom archive paths are no longer supported" in result.stderr
+    assert "automatically downloaded and cached" in result.stderr
 
-    # This test would normally start the server, but we can't easily test that
-    # in a unit test without mocking the MCP server. Instead, we'll just verify
-    # the argument parsing logic works by checking it doesn't error immediately
 
-    # The server would block, so we just verify the path validation works
-    assert archive_dir.exists()
+def test_too_many_arguments_rejected():
+    """Test that too many arguments shows error with migration message."""
+    result = subprocess.run(
+        [sys.executable, "-m", "spicedocs_mcp.server", "arg1", "arg2"],
+        capture_output=True,
+        text=True
+    )
+
+    assert result.returncode == 1
+    assert "Too many arguments" in result.stderr
+    assert "Custom archive paths are no longer supported" in result.stderr
 
 
 def test_cache_initialization_with_mock_server(httpserver: HTTPServer, tmp_path, monkeypatch):
