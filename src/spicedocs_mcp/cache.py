@@ -191,8 +191,8 @@ def download_with_retry(client: httpx.Client, url: str, max_retries: int = 3) ->
                 logger.error(f"Network error after {max_retries} attempts: {url}")
                 raise
 
-    # This should be unreachable, but satisfies mypy
-    raise RuntimeError(f"Unexpected end of retry loop for {url}")
+    # This is reached only if max_retries is 0 (loop never executes)
+    raise RuntimeError(f"No retry attempts made for {url} (max_retries=0)")
 
 
 def download_documentation(base_url: str, cache_dir: Path) -> None:
