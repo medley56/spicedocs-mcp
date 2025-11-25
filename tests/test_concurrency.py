@@ -1,8 +1,6 @@
 """Tests for thread safety and concurrent database access."""
 
 import asyncio
-import sqlite3
-from pathlib import Path
 
 import pytest
 

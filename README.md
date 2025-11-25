@@ -113,7 +113,7 @@ uv sync
 
 ### Documentation Archive Structure
 
-The server expects a directory structure similar to:
+The server automatically downloads documentation from the NAIF website and stores it in a cache directory. The cached documentation has this structure:
 
 ```text
 archive_directory/
@@ -137,16 +137,15 @@ archive_directory/
 ### Command-Line Options
 
 ```
-spicedocs-mcp [OPTIONS] [ARCHIVE_PATH]
+spicedocs-mcp [OPTIONS]
 
 Options:
-  ARCHIVE_PATH      Path to local SPICE documentation archive (optional)
   --refresh         Force re-download of cached documentation
   --cache-dir       Show cache directory location and exit
   --help, -h        Show help message
 ```
 
-If ARCHIVE_PATH is not provided, documentation will be automatically downloaded to a platform-appropriate cache directory on first run.
+Documentation is automatically downloaded to a platform-appropriate cache directory on first run.
 
 ### For Development/Testing
 
@@ -155,9 +154,6 @@ If you've cloned the repository and want to run the server locally:
 ```bash
 # Use cached/downloaded documentation (recommended)
 uv run spicedocs-mcp
-
-# Or provide a local archive path for testing
-uv run spicedocs-mcp /path/to/local/archive
 ```
 
 ### Using with Claude Desktop (Development Mode)
@@ -180,23 +176,6 @@ If you've cloned the repository and want to use your local version with Claude D
 ```
 
 Replace `/absolute/path/to/your/cloned/spicedocs-mcp` with the actual path to your cloned repository.
-
-**Note:** For development, you can also provide a local archive path if you want to test with a custom documentation set:
-```json
-{
-  "mcpServers": {
-    "spicedocs": {
-      "command": "uv",
-      "args": [
-        "run",
-        "spicedocs-mcp",
-        "/path/to/local/archive"
-      ],
-      "cwd": "/absolute/path/to/your/cloned/spicedocs-mcp"
-    }
-  }
-}
-```
 
 ## Usage Examples
 

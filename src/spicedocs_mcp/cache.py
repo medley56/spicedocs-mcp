@@ -260,7 +260,6 @@ def download_documentation(base_url: str, cache_dir: Path) -> None:
 
                 # Determine save path
                 parsed = urlparse(url)
-                base_parsed = urlparse(base_url)
 
                 # Always save under naif.jpl.nasa.gov, even if downloading from localhost (for testing)
                 # This ensures consistent directory structure
@@ -332,7 +331,7 @@ def download_documentation(base_url: str, cache_dir: Path) -> None:
         temp_dir.rename(cache_dir)
         logger.info(f"Documentation cached successfully at {cache_dir}")
 
-    except Exception as e:
+    except Exception:
         # Clean up temp directory on failure
         if temp_dir.exists():
             shutil.rmtree(temp_dir)

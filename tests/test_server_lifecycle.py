@@ -1,9 +1,6 @@
 """Tests for server initialization, database setup, and lifecycle management."""
 
-import sqlite3
-from pathlib import Path
 from spicedocs_mcp.server import init_database, get_connection
-from spicedocs_mcp.cache import get_cache_dir
 import spicedocs_mcp.server as server_module
 
 

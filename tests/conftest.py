@@ -1,8 +1,6 @@
 """Pytest configuration and shared fixtures for SpiceDocs MCP server tests."""
 
-import os
 import pytest
-from pathlib import Path
 from tests.fixtures.test_data import build_minimal_archive
 import spicedocs_mcp.server as server_module
 from spicedocs_mcp.server import mcp, init_database

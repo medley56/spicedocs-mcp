@@ -18,7 +18,7 @@ SpiceDocs MCP is a Model Context Protocol (MCP) server that provides Claude with
 
 The server is implemented as a single module at [src/spicedocs_mcp/server.py](../src/spicedocs_mcp/server.py) that:
 
-1. Accepts a path to a local archive of SPICE documentation HTML files
+1. Automatically downloads SPICE documentation to a platform-appropriate cache directory
 2. Builds a SQLite database with FTS5 indexing for fast full-text search
 3. Exposes 5 MCP tools for searching, browsing, and analyzing documentation
 4. Uses path traversal protection for secure file access
@@ -31,7 +31,7 @@ spicedocs-mcp/
 │   └── spicedocs_mcp/
 │       ├── __init__.py          # Package metadata
 │       ├── server.py            # Main MCP server implementation
-│       └── naif.jpl.nasa.gov/   # Local archive of SPICE documentation (HTML files)
+│       └── cache.py             # Cache management and documentation download
 ├── .devcontainer/
 │   ├── Dockerfile               # Development container setup
 │   ├── devcontainer.json        # VSCode devcontainer config
@@ -80,26 +80,20 @@ This creates a virtual environment and installs all dependencies from the lock f
 
 ### Standalone Mode
 
-Run the server directly with an archive path:
+Run the server directly:
 
 ```bash
-uv run spicedocs-mcp src/spicedocs_mcp/naif.jpl.nasa.gov
+uv run spicedocs-mcp
 ```
 
-Or using Python directly:
-
-```bash
-uv run python src/spicedocs_mcp/server.py src/spicedocs_mcp/naif.jpl.nasa.gov
-```
-
-The server expects exactly one argument: the path to the documentation archive directory.
+On first run, the server will automatically download the SPICE documentation to a platform-appropriate cache directory.
 
 ### Testing with MCP Inspector
 
 Use the MCP Inspector CLI tool to test the server:
 
 ```bash
-npx @modelcontextprotocol/inspector uv run spicedocs-mcp src/spicedocs_mcp/naif.jpl.nasa.gov
+npx @modelcontextprotocol/inspector uv run spicedocs-mcp
 ```
 
 This opens a web interface for testing MCP tools interactively.
@@ -115,8 +109,7 @@ Add to your Claude Desktop configuration file (`~/.config/Claude/claude_desktop_
       "command": "uv",
       "args": [
         "run",
-        "spicedocs-mcp",
-        "/absolute/path/to/spicedocs-mcp/src/spicedocs_mcp/naif.jpl.nasa.gov"
+        "spicedocs-mcp"
       ],
       "cwd": "/absolute/path/to/spicedocs-mcp"
     }
@@ -130,23 +123,24 @@ Add to your Claude Desktop configuration file (`~/.config/Claude/claude_desktop_
 
 When the server starts, it:
 
-1. Creates a SQLite database at `<archive_path>/.archive_index.db`
-2. Creates a `pages` table for storing page metadata
-3. Attempts to create an FTS5 virtual table for full-text search
-4. Falls back to basic LIKE search if FTS5 is unavailable
-5. Indexes all HTML files if the database is empty
+1. Downloads documentation to a platform-appropriate cache directory (if not already cached)
+2. Creates a SQLite database (`.archive_index.db`) in the cache directory
+3. Creates a `pages` table for storing page metadata
+4. Attempts to create an FTS5 virtual table for full-text search
+5. Falls back to basic LIKE search if FTS5 is unavailable
+6. Indexes all HTML files if the database is empty
 
 The index is built automatically on first run and cached for subsequent runs.
 
 ### Rebuilding the Index
 
-To force a rebuild of the search index:
+To force a rebuild of the search index, use the `--refresh` flag:
 
 ```bash
-rm src/spicedocs_mcp/naif.jpl.nasa.gov/.archive_index.db
+uv run spicedocs-mcp --refresh
 ```
 
-The server will rebuild the index on next startup.
+This will re-download the documentation and rebuild the index.
 
 ### Available MCP Tools
 
@@ -260,10 +254,14 @@ uv run python
 
 ```python
 from pathlib import Path
+from spicedocs_mcp.cache import get_or_download_cache
 from spicedocs_mcp.server import init_database, search_archive
+import spicedocs_mcp.server as server_module
 
-archive_path = Path("src/spicedocs_mcp/naif.jpl.nasa.gov")
-db_conn = init_database(archive_path)
+# Get or download cached documentation
+archive_path = get_or_download_cache()
+server_module.archive_path = archive_path
+init_database(archive_path)
 
 # Test search
 import asyncio
@@ -286,10 +284,16 @@ When running with Claude Desktop, check the Claude logs for server output.
 
 ### Database Inspection
 
-Examine the SQLite database directly:
+Find your cache directory first:
 
 ```bash
-sqlite3 src/spicedocs_mcp/naif.jpl.nasa.gov/.archive_index.db
+uv run spicedocs-mcp --cache-dir
+```
+
+Then examine the SQLite database directly:
+
+```bash
+sqlite3 ~/.cache/spicedocs-mcp/spicedocs/.archive_index.db
 
 # Show all tables
 .tables
@@ -333,7 +337,7 @@ The `[project.scripts]` section creates a console script entry point for `uv run
 Users can install and run directly from a Git repository using uvx:
 
 ```bash
-uvx --from git+https://github.com/username/spicedocs-mcp spicedocs-mcp /path/to/archive
+uvx --from git+https://github.com/username/spicedocs-mcp spicedocs-mcp
 ```
 
 This creates an isolated environment and runs the server without requiring local installation.
@@ -453,7 +457,7 @@ uv run ruff check --fix .
 
 ### "Database not initialized" errors
 
-Ensure the server's `main()` function is called and the archive path is valid. The global `db_conn` variable must be set before tools can run.
+Ensure the server's `main()` function is called. The global `db_path` variable must be set before tools can run.
 
 ### FTS5 not available
 
@@ -472,30 +476,30 @@ python3 -c "import sqlite3; print(sqlite3.sqlite_version)"
 
 ### Search returns no results
 
-1. Check if the database exists: `ls src/spicedocs_mcp/naif.jpl.nasa.gov/.archive_index.db`
-2. Check if pages are indexed: `sqlite3 <db> "SELECT COUNT(*) FROM pages;"`
-3. Rebuild the index by deleting the database file
-4. Check search query syntax (FTS5 has specific query syntax)
+1. Find your cache directory: `uv run spicedocs-mcp --cache-dir`
+2. Check if the database exists in the cache directory (`.archive_index.db`)
+3. Check if pages are indexed: `sqlite3 <db> "SELECT COUNT(*) FROM pages;"`
+4. Rebuild the index: `uv run spicedocs-mcp --refresh`
+5. Check search query syntax (FTS5 has specific query syntax)
 
 ### Path traversal errors
 
 The server protects against path traversal attacks. Valid paths must:
-- Be relative to the archive directory
+- Be relative to the documentation root
 - Resolve to a location inside the archive
 - Not contain `..` segments that escape the archive
 
 Example valid paths:
-- `index.html`
-- `C/cspice/spkpos_c.html`
-- `naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/index.html`
+- `pub/naif/toolkit_docs/C/index.html`
+- `pub/naif/toolkit_docs/C/cspice/spkpos_c.html`
 
 ### Server won't start in Claude Desktop
 
 1. Check the JSON syntax in `claude_desktop_config.json`
-2. Ensure all paths are absolute, not relative
-3. Verify the `cwd` directory exists and contains [pyproject.toml](../pyproject.toml)
-4. Check Claude Desktop logs for startup errors
-5. Test the server command manually in a terminal
+2. Ensure the `cwd` directory exists and contains [pyproject.toml](../pyproject.toml)
+3. Check Claude Desktop logs for startup errors
+4. Test the server command manually in a terminal
+5. Check network connection on first run (documentation needs to be downloaded)
 
 ## Future Development
 
@@ -504,8 +508,7 @@ See [ROADMAP.md](../ROADMAP.md) for planned features:
 1. **GitHub Repository** - Clean git history and publish to GitHub
 2. **Clean up UV Management** - Simplify pyproject.toml for uvx installation
 3. **Add Basic Tests** - Integration tests with GitHub Actions workflow
-4. **Dynamic Documentation Download** - Auto-download and cache SPICE docs from NAIF website
-5. **Improved User Documentation** - Setup guides for uvx installation
+4. **Improved User Documentation** - Setup guides for uvx installation
 
 ## Additional Resources
 

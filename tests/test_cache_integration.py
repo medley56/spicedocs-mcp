@@ -3,8 +3,6 @@
 import json
 import subprocess
 import sys
-from pathlib import Path
-from unittest.mock import patch
 
 import httpx
 import pytest
@@ -166,7 +164,7 @@ def test_refresh_flag_forces_redownload(httpserver: HTTPServer, tmp_path, monkey
 
     # Simulate --refresh by removing cache and re-downloading
     import shutil
-    from spicedocs_mcp.cache import get_cache_dir, get_or_download_cache
+    from spicedocs_mcp.cache import get_or_download_cache
 
     # Remove old cache
     if cache_dir.exists():

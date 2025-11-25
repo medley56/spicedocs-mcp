@@ -1,9 +1,6 @@
 """Unit tests for cache management module."""
 
 import json
-import os
-from pathlib import Path
-from unittest.mock import patch
 
 import httpx
 import pytest
@@ -198,10 +195,10 @@ def test_download_documentation(httpserver: HTTPServer, tmp_path, monkeypatch):
         content_type="text/html"
     )
     httpserver.expect_oneshot_request(f"{base_path}index.html").respond_with_data(
-        f'<html><body>'
-        f'<a href="cspice/spkpos_c.html">spkpos_c</a>'
-        f'<a href="ug/index.html">User Guide</a>'
-        f'</body></html>',
+        '<html><body>'
+        '<a href="cspice/spkpos_c.html">spkpos_c</a>'
+        '<a href="ug/index.html">User Guide</a>'
+        '</body></html>',
         content_type="text/html"
     )
     httpserver.expect_oneshot_request(f"{base_path}cspice/spkpos_c.html").respond_with_data(
