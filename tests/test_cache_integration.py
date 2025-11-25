@@ -194,22 +194,29 @@ def test_database_location_in_cache_dir(tmp_path, monkeypatch):
     monkeypatch.setenv("SPICEDOCS_CACHE_DIR", str(cache_dir))
 
     from spicedocs_mcp.server import init_database
+    import spicedocs_mcp.server as server_module
     from spicedocs_mcp.cache import get_or_download_cache, get_cache_dir
 
     archive_path = get_or_download_cache()
 
-    # Initialize database
-    conn = init_database(archive_path)
+    # Initialize database (no longer returns a connection)
+    server_module.archive_path = archive_path
+    init_database(archive_path)
 
-    # Verify database is in cache directory, not archive directory
-    db_path = get_cache_dir() / ".archive_index.db"
-    assert db_path.exists()
+    try:
+        # Verify database is in cache directory, not archive directory
+        db_path = get_cache_dir() / ".archive_index.db"
+        assert db_path.exists()
 
-    # Verify database is NOT in archive directory
-    archive_db_path = archive_path / ".archive_index.db"
-    assert not archive_db_path.exists()
+        # Verify database is NOT in archive directory
+        archive_db_path = archive_path / ".archive_index.db"
+        assert not archive_db_path.exists()
 
-    conn.close()
+    finally:
+        # Cleanup global state
+        server_module.db_path = None
+        server_module.archive_path = None
+        server_module.fts_available = False
 
 
 def test_network_failure_handling(tmp_path, monkeypatch):

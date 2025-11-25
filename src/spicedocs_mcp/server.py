@@ -4,6 +4,12 @@ NAIF SPICE Documentation MCP Server
 
 A modern Model Context Protocol server for searching and browsing NAIF SPICE documentation.
 Built with FastMCP for improved simplicity and maintainability.
+
+Thread Safety:
+    This server uses per-request SQLite connections to ensure thread safety.
+    Each MCP tool invocation creates its own connection, avoiding shared state
+    across concurrent async tasks. SQLite with WAL mode handles concurrent reads
+    efficiently while serializing writes at the database level.
 """
 
 import logging
@@ -30,15 +36,43 @@ logger = logging.getLogger("spicedocs-mcp")
 mcp = FastMCP("spicedocs")
 mcp.description = "Search and browse NAIF SPICE documentation"
 
-# Global variables for database connection
+# Global configuration (immutable after server startup)
 archive_path: Optional[Path] = None
-db_conn: Optional[sqlite3.Connection] = None
+db_path: Optional[Path] = None
 fts_available: bool = False
 
 
-def init_database(archive_dir: Path) -> sqlite3.Connection:
-    """Initialize SQLite database for the archive."""
-    global fts_available
+def get_connection() -> sqlite3.Connection:
+    """
+    Create a new SQLite connection for the current request.
+
+    Each MCP tool invocation should call this function to get its own
+    connection, ensuring thread safety across concurrent async tasks.
+
+    Returns:
+        sqlite3.Connection: A new database connection
+
+    Raises:
+        RuntimeError: If database path is not initialized
+    """
+    if db_path is None:
+        raise RuntimeError("Database not initialized")
+    return sqlite3.connect(str(db_path))
+
+
+def init_database(archive_dir: Path) -> None:
+    """
+    Initialize SQLite database schema for the archive.
+
+    This function sets up the global db_path and fts_available variables,
+    creates the database schema if needed, and populates the index if empty.
+    It does NOT return a persistent connection - each request should call
+    get_connection() to obtain its own connection.
+
+    Args:
+        archive_dir: Path to the documentation archive directory
+    """
+    global db_path, fts_available
 
     # Store database in cache directory if using cached documentation,
     # otherwise store it in the archive directory (for backward compatibility)
@@ -52,41 +86,39 @@ def init_database(archive_dir: Path) -> sqlite3.Connection:
         # Using local archive - store DB in archive directory (backward compatible)
         db_path = archive_dir / ".archive_index.db"
 
-    conn = sqlite3.connect(str(db_path))
-    
-    # Create main table
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS pages (
-            id INTEGER PRIMARY KEY,
-            path TEXT UNIQUE,
-            title TEXT,
-            content TEXT,
-            url TEXT,
-            last_modified REAL
-        )
-    """)
-    
-    # Try to create FTS5 virtual table for full-text search
-    try:
+    # Use a temporary connection for schema setup and indexing
+    with sqlite3.connect(str(db_path)) as conn:
+        # Create main table
         conn.execute("""
-            CREATE VIRTUAL TABLE IF NOT EXISTS pages_fts USING fts5(
-                title, content, url, content=pages, content_rowid=id
+            CREATE TABLE IF NOT EXISTS pages (
+                id INTEGER PRIMARY KEY,
+                path TEXT UNIQUE,
+                title TEXT,
+                content TEXT,
+                url TEXT,
+                last_modified REAL
             )
         """)
-        fts_available = True
-        logger.info("FTS5 search enabled")
-    except sqlite3.OperationalError as e:
-        logger.warning(f"FTS5 not available, using basic search: {e}")
-        fts_available = False
-    
-    # Check if index needs rebuilding
-    cursor = conn.execute("SELECT COUNT(*) FROM pages")
-    if cursor.fetchone()[0] == 0:
-        logger.info("Building search index...")
-        rebuild_index(archive_dir, conn)
-        logger.info("Search index built successfully")
-    
-    return conn
+
+        # Try to create FTS5 virtual table for full-text search
+        try:
+            conn.execute("""
+                CREATE VIRTUAL TABLE IF NOT EXISTS pages_fts USING fts5(
+                    title, content, url, content=pages, content_rowid=id
+                )
+            """)
+            fts_available = True
+            logger.info("FTS5 search enabled")
+        except sqlite3.OperationalError as e:
+            logger.warning(f"FTS5 not available, using basic search: {e}")
+            fts_available = False
+
+        # Check if index needs rebuilding
+        cursor = conn.execute("SELECT COUNT(*) FROM pages")
+        if cursor.fetchone()[0] == 0:
+            logger.info("Building search index...")
+            rebuild_index(archive_dir, conn)
+            logger.info("Search index built successfully")
 
 
 def rebuild_index(archive_dir: Path, conn: sqlite3.Connection):
@@ -157,31 +189,32 @@ async def search_archive(query: str, limit: int = 10) -> str:
     Returns:
         Search results with titles, paths, and snippets
     """
-    if not db_conn:
+    if db_path is None:
         return "Error: Database not initialized"
     
-    if fts_available:
-        # Use FTS5 search
-        cursor = db_conn.execute("""
-            SELECT p.path, p.title, p.url, snippet(pages_fts, 1, '<mark>', '</mark>', '...', 64) as snippet
-            FROM pages_fts
-            JOIN pages p ON pages_fts.rowid = p.id
-            WHERE pages_fts MATCH ?
-            ORDER BY bm25(pages_fts)
-            LIMIT ?
-        """, (query, limit))
-    else:
-        # Fallback to LIKE search
-        search_pattern = f"%{query}%"
-        cursor = db_conn.execute("""
-            SELECT path, title, url, 
-                   substr(content, max(1, instr(lower(content), lower(?)) - 50), 150) as snippet
-            FROM pages
-            WHERE title LIKE ? OR content LIKE ?
-            LIMIT ?
-        """, (query, search_pattern, search_pattern, limit))
-    
-    results = cursor.fetchall()
+    with get_connection() as conn:
+        if fts_available:
+            # Use FTS5 search
+            cursor = conn.execute("""
+                SELECT p.path, p.title, p.url, snippet(pages_fts, 1, '<mark>', '</mark>', '...', 64) as snippet
+                FROM pages_fts
+                JOIN pages p ON pages_fts.rowid = p.id
+                WHERE pages_fts MATCH ?
+                ORDER BY bm25(pages_fts)
+                LIMIT ?
+            """, (query, limit))
+        else:
+            # Fallback to LIKE search
+            search_pattern = f"%{query}%"
+            cursor = conn.execute("""
+                SELECT path, title, url, 
+                       substr(content, max(1, instr(lower(content), lower(?)) - 50), 150) as snippet
+                FROM pages
+                WHERE title LIKE ? OR content LIKE ?
+                LIMIT ?
+            """, (query, search_pattern, search_pattern, limit))
+        
+        results = cursor.fetchall()
     
     if not results:
         return f"No results found for query: '{query}'"
@@ -209,7 +242,7 @@ async def get_page(path: str, include_raw: bool = False) -> str:
     Returns:
         Page content with title, size, and text (optionally raw HTML)
     """
-    if not archive_path:
+    if archive_path is None:
         return "Error: Archive path not initialized"
     
     # Ensure path is safe and within archive
@@ -264,25 +297,26 @@ async def list_pages(filter_pattern: Optional[str] = None, limit: int = 50) -> s
     Returns:
         List of pages with titles and paths
     """
-    if not db_conn:
+    if db_path is None:
         return "Error: Database not initialized"
     
-    # Get pages from database
-    if filter_pattern:
-        cursor = db_conn.execute("""
-            SELECT path, title, url FROM pages 
-            WHERE path GLOB ? 
-            ORDER BY path 
-            LIMIT ?
-        """, (filter_pattern, limit))
-    else:
-        cursor = db_conn.execute("""
-            SELECT path, title, url FROM pages 
-            ORDER BY path 
-            LIMIT ?
-        """, (limit,))
-    
-    results = cursor.fetchall()
+    with get_connection() as conn:
+        # Get pages from database
+        if filter_pattern:
+            cursor = conn.execute("""
+                SELECT path, title, url FROM pages 
+                WHERE path GLOB ? 
+                ORDER BY path 
+                LIMIT ?
+            """, (filter_pattern, limit))
+        else:
+            cursor = conn.execute("""
+                SELECT path, title, url FROM pages 
+                ORDER BY path 
+                LIMIT ?
+            """, (limit,))
+        
+        results = cursor.fetchall()
     
     if not results:
         return "No pages found in archive"
@@ -313,7 +347,7 @@ async def extract_links(path: str, internal_only: bool = True) -> str:
     Returns:
         List of links found in the page
     """
-    if not archive_path:
+    if archive_path is None:
         return "Error: Archive path not initialized"
     
     # Validate path
@@ -399,7 +433,7 @@ async def get_archive_stats() -> str:
     Returns:
         Archive statistics including file counts, sizes, and indexed pages
     """
-    if not archive_path or not db_conn:
+    if archive_path is None or db_path is None:
         return "Error: Archive not initialized"
     
     try:
@@ -411,9 +445,10 @@ async def get_archive_stats() -> str:
         # Calculate total size
         total_size = sum(f.stat().st_size for f in archive_path.rglob("*") if f.is_file())
         
-        # Get database stats
-        cursor = db_conn.execute("SELECT COUNT(*) FROM pages")
-        indexed_pages = cursor.fetchone()[0]
+        # Get database stats using a per-request connection
+        with get_connection() as conn:
+            cursor = conn.execute("SELECT COUNT(*) FROM pages")
+            indexed_pages = cursor.fetchone()[0]
         
         response = "# Archive Statistics\n\n"
         response += f"**Archive Path:** {archive_path}\n"
@@ -441,7 +476,7 @@ def main():
         spicedocs-mcp --cache-dir        # Show cache directory and exit
         spicedocs-mcp --help             # Show help message
     """
-    global archive_path, db_conn
+    global archive_path
 
     # Parse command-line arguments
     if len(sys.argv) == 1:
@@ -502,8 +537,8 @@ def main():
     logger.info(f"Initializing SpiceDocs MCP server with archive: {archive_path}")
 
     try:
-        # Initialize database
-        db_conn = init_database(archive_path)
+        # Initialize database schema and index (sets db_path and fts_available globals)
+        init_database(archive_path)
 
         # Run the FastMCP server (synchronous)
         mcp.run()
@@ -513,9 +548,6 @@ def main():
     except Exception as e:
         logger.error(f"Server error: {e}")
         sys.exit(1)
-    finally:
-        if db_conn:
-            db_conn.close()
 
 
 if __name__ == "__main__":

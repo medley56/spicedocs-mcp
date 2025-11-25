@@ -30,8 +30,8 @@ def initialized_server(test_archive):
     Initialize server with test archive and set up global state.
 
     This fixture:
-    - Sets global archive_path and db_conn
-    - Initializes SQLite database with test data
+    - Sets global archive_path, db_path, and fts_available
+    - Initializes SQLite database schema and index
     - Yields the FastMCP server instance
     - Cleans up global state after test
 
@@ -43,14 +43,12 @@ def initialized_server(test_archive):
     """
     # Set global state required by current server implementation
     server_module.archive_path = test_archive
-    server_module.db_conn = init_database(test_archive)
+    init_database(test_archive)  # Sets db_path and fts_available globals
 
     yield mcp
 
     # Cleanup global state
-    if server_module.db_conn:
-        server_module.db_conn.close()
-    server_module.db_conn = None
+    server_module.db_path = None
     server_module.archive_path = None
     server_module.fts_available = False
 
