@@ -1,0 +1,21 @@
+[project]
+name = "spicedocs-mcp"
+version = "0.1.0"
+description = "MCP server for NAIF SPICE documentation"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    {name = "Gavin Medley", email = "gavin.medley@lasp.colorado.edu"}
+]
+dependencies = [
+    "beautifulsoup4>=4.12.0,<5.0.0",
+    "mcp>=1.0.0,<2.0.0",
+    "fastmcp>=2.0.0,<3.0.0",
+]
+
+[project.scripts]
+spicedocs-mcp = "spicedocs_mcp.server:main"
+
+[build-system]
+requires = ["uv_build>=0.9.11,<0.10.0"]
+build-backend = "uv_build"
