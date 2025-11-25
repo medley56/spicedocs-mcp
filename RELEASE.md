@@ -150,7 +150,7 @@ For critical fixes that need to be applied to an older release:
 
 1. Checkout the release branch: `git checkout release/X.Y`
 2. Cherry-pick or create the fix
-3. Update version to next patch: `X.Y.Z+1`
+3. Update version to next patch: e.g., if the previous version was `1.0.2`, update to `1.0.3`
 4. Update CHANGELOG.md
-5. Tag and push: `git tag -a X.Y.Z+1 -m "Release X.Y.Z+1" && git push origin X.Y.Z+1`
+5. Tag and push: `git tag -a 1.0.3 -m "Release 1.0.3" && git push origin 1.0.3`
 6. Optionally cherry-pick the fix to `main` if applicable

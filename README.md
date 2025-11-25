@@ -55,13 +55,15 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/medley56/spicedocs-mcp",
+        "git+https://github.com/medley56/spicedocs-mcp@1.0.0",
         "spicedocs-mcp"
       ]
     }
   }
 }
 ```
+
+**Note:** Replace `@1.0.0` with the desired version tag. See [Releases](https://github.com/medley56/spicedocs-mcp/releases) for available versions. Installing without a version tag will install unreleased code from the main branch.
 
 3. Restart Claude Desktop
 
@@ -228,14 +230,14 @@ Documentation is cached in platform-appropriate directories:
 
 To see your cache location:
 ```bash
-uvx --from git+https://github.com/medley56/spicedocs-mcp spicedocs-mcp --cache-dir
+uvx --from git+https://github.com/medley56/spicedocs-mcp@1.0.0 spicedocs-mcp --cache-dir
 ```
 
 ### Refresh Cache
 
 To re-download the documentation (e.g., if NAIF updates their docs):
 ```bash
-uvx --from git+https://github.com/medley56/spicedocs-mcp spicedocs-mcp --refresh
+uvx --from git+https://github.com/medley56/spicedocs-mcp@1.0.0 spicedocs-mcp --refresh
 ```
 
 ### Clear Cache
