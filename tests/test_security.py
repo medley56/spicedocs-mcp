@@ -68,6 +68,51 @@ async def test_extract_links_from_subdir_traversal(client):
 
 
 # ============================================================================
+# Cross-platform path handling tests
+# ============================================================================
+
+
+async def test_extract_links_normalizes_paths_cross_platform(client):
+    """Test that relative path normalization works correctly across platforms.
+
+    This test verifies that paths with .. and . components are properly
+    normalized using pathlib rather than os.path.normpath, ensuring
+    consistent behavior on both Windows and Unix systems.
+
+    The fix uses Path.resolve() instead of os.path.normpath because the latter
+    converts forward slashes to backslashes on Windows, breaking URL path handling.
+    """
+    # The deeply nested page has links with ../../ patterns
+    result = await client.call_tool("extract_links", {
+        "path": "subdir/deep/deeper.html",
+        "internal_only": True
+    })
+
+    content = result.content[0].text
+
+    # Should successfully resolve the relative paths and find valid internal links
+    assert "Found" in content
+    # The link ../../index.html should resolve correctly
+    assert "index.html" in content
+
+
+async def test_extract_links_handles_dot_segments(client):
+    """Test that paths with . and .. segments are handled correctly."""
+    # The nested page has links like ../index.html
+    result = await client.call_tool("extract_links", {
+        "path": "subdir/nested.html",
+        "internal_only": True
+    })
+
+    content = result.content[0].text
+
+    # Should find the internal links after path normalization
+    assert "Found" in content
+    # Should include the resolved relative link to parent directory
+    assert "index.html" in content
+
+
+# ============================================================================
 # Invalid path handling tests
 # ============================================================================
 

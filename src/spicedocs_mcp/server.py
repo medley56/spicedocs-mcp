@@ -13,7 +13,6 @@ Thread Safety:
 """
 
 import logging
-import os
 import sqlite3
 import sys
 from pathlib import Path
@@ -396,10 +395,8 @@ async def extract_links(path: str, internal_only: bool = True) -> str:
                     # Relative path from current file
                     link_path = current_dir / base_href
                 
-                # Normalize the path
-                link_path = Path(os.path.normpath(link_path))
-                
                 # Check if it exists in archive
+                # Note: Path normalization (handling .. and .) is done by resolve() below
                 full_link_path = archive_path / link_path
                 try:
                     full_link_path = full_link_path.resolve()
