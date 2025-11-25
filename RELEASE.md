@@ -126,15 +126,14 @@ Tags not matching the `X.Y.Z` pattern are automatically marked as pre-releases i
 Users can install specific versions:
 
 ```bash
-# Install latest release
-uvx --from git+https://github.com/medley56/spicedocs-mcp spicedocs-mcp
-
-# Install specific version
+# Install a specific version (recommended)
 uvx --from git+https://github.com/medley56/spicedocs-mcp@1.0.0 spicedocs-mcp
 
 # Using pip
 pip install git+https://github.com/medley56/spicedocs-mcp@1.0.0
 ```
+
+**Note:** Installing without a tag (e.g., `uvx --from git+https://github.com/medley56/spicedocs-mcp`) will install from the default branch, which may include unreleased changes. Always specify a version tag for production use.
 
 ## Release Workflow
 
