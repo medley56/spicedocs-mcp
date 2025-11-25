@@ -133,6 +133,8 @@ def rebuild_index(archive_dir: Path, conn: sqlite3.Connection):
 def index_file(file_path: Path, base_dir: Path, conn: sqlite3.Connection):
     """Index a single HTML file."""
     relative_path = file_path.relative_to(base_dir)
+    # Use forward slashes for cross-platform consistency
+    path_str = relative_path.as_posix()
     
     with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
         content = f.read()
@@ -149,7 +151,7 @@ def index_file(file_path: Path, base_dir: Path, conn: sqlite3.Connection):
     text_content = ' '.join(soup.get_text().split())
     
     # Try to extract original URL
-    url = str(relative_path)
+    url = path_str
     canonical = soup.find('link', rel='canonical')
     if canonical and canonical.get('href'):
         url = canonical['href']
@@ -158,13 +160,13 @@ def index_file(file_path: Path, base_dir: Path, conn: sqlite3.Connection):
     cursor = conn.execute("""
         INSERT OR REPLACE INTO pages (path, title, content, url, last_modified)
         VALUES (?, ?, ?, ?, ?)
-    """, (str(relative_path), title, text_content, url, file_path.stat().st_mtime))
+    """, (path_str, title, text_content, url, file_path.stat().st_mtime))
     
     # Update FTS index if available
     if fts_available:
         rowid = cursor.lastrowid
         if not rowid:
-            cursor = conn.execute("SELECT id FROM pages WHERE path = ?", (str(relative_path),))
+            cursor = conn.execute("SELECT id FROM pages WHERE path = ?", (path_str,))
             result = cursor.fetchone()
             if result:
                 rowid = result[0]

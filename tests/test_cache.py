@@ -26,9 +26,13 @@ def test_get_cache_dir_default(monkeypatch):
     monkeypatch.delenv("SPICEDOCS_CACHE_DIR", raising=False)
 
     cache_dir = get_cache_dir()
-    # The actual directory name depends on platformdirs implementation
-    assert "spicedocs" in cache_dir.name.lower()
-    assert "spicedocs-mcp" in str(cache_dir)
+    # The actual directory structure depends on platformdirs implementation
+    # On Linux: ~/.cache/spicedocs-mcp/spicedocs
+    # On Windows: %LOCALAPPDATA%\spicedocs\spicedocs-mcp\Cache
+    # Check that the path contains both 'spicedocs' and 'spicedocs-mcp'
+    cache_dir_str = str(cache_dir).lower()
+    assert "spicedocs" in cache_dir_str
+    assert "spicedocs-mcp" in cache_dir_str
 
 
 def test_get_cache_dir_env_override(monkeypatch, tmp_path):
