@@ -21,15 +21,30 @@ The SpiceDocs MCP server indexes and provides full-text search capabilities acro
 - Support for both relative and absolute paths within the archive
 - Link extraction for navigation between related pages
 
+## System Requirements
+
+### Required
+
+- **Python 3.10 or higher** - The server requires Python 3.10+ for type hints and async features
+- **[uv](https://docs.astral.sh/uv/getting-started/installation/) package manager** - Used for dependency management and running the server
+- **Internet connection** - Required for first-time documentation download (~28MB)
+- **Disk space** - At least 100MB free for downloading and caching documentation
+
+### Optional (Recommended)
+
+- **SQLite with FTS5 extension** - Enables fast full-text search with BM25 ranking. Python includes SQLite, but FTS5 support depends on how your system's SQLite library was compiled. The server automatically falls back to basic search if FTS5 is unavailable.
+
+To check if FTS5 is available on your system:
+
+```bash
+python3 -c "import sqlite3; conn = sqlite3.connect(':memory:'); conn.execute('CREATE VIRTUAL TABLE t USING fts5(c)'); print('FTS5 is available')"
+```
+
+If you see an error, your SQLite doesn't support FTS5. The server will still work, but search will be slower.
+
 ## Quick Start
 
 The easiest way to use SpiceDocs MCP is with Claude Desktop and `uvx`:
-
-### Prerequisites
-
-- Python 3.10 or higher
-- [uv](https://docs.astral.sh/uv/getting-started/installation/) package manager
-- Internet connection (for first-time documentation download)
 
 ### Installation with Claude Desktop
 
@@ -294,7 +309,17 @@ Built using:
 - Ensure the documentation has been downloaded successfully
 - Check the cache directory contains `.archive_index.db`
 - Try refreshing: `spicedocs-mcp --refresh`
-- Check if FTS5 is available in your SQLite installation
+- Check if FTS5 is available (see [System Requirements](#system-requirements))
+
+### FTS5 not available
+
+If you see "FTS5 not available, using basic search" in the logs:
+
+- **Linux (Debian/Ubuntu)**: The system SQLite should include FTS5 by default with Python 3.10+
+- **macOS**: FTS5 is included with the system SQLite
+- **Windows**: FTS5 is typically included with Python's bundled SQLite
+
+If FTS5 is missing, you can still use the server - it will fall back to basic LIKE-based search which is slower but functional.
 
 ### Claude Desktop doesn't see the server
 
