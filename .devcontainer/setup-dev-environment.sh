@@ -3,7 +3,7 @@
 # Set up the development environment
 
 # Install uv dependencies
-uv sync
+uv sync --all-extras
 
 # Configure Git
 
