@@ -16,6 +16,8 @@ from typing import Optional
 from bs4 import BeautifulSoup
 from mcp.server.fastmcp import FastMCP
 
+from .cache import get_or_download_cache, get_cache_dir
+
 # Configure logging to stderr
 logging.basicConfig(
     level=logging.INFO,
@@ -37,8 +39,19 @@ fts_available: bool = False
 def init_database(archive_dir: Path) -> sqlite3.Connection:
     """Initialize SQLite database for the archive."""
     global fts_available
-    
-    db_path = archive_dir / ".archive_index.db"
+
+    # Store database in cache directory if using cached documentation,
+    # otherwise store it in the archive directory (for backward compatibility)
+    cache_dir = get_cache_dir()
+    naif_path = cache_dir / "naif.jpl.nasa.gov"
+
+    if archive_dir == naif_path:
+        # Using cached documentation - store DB in cache directory
+        db_path = cache_dir / ".archive_index.db"
+    else:
+        # Using local archive - store DB in archive directory (backward compatible)
+        db_path = archive_dir / ".archive_index.db"
+
     conn = sqlite3.connect(str(db_path))
     
     # Create main table
@@ -418,29 +431,83 @@ async def get_archive_stats() -> str:
 
 
 def main():
-    """Main entry point for the MCP server."""
+    """
+    Main entry point for the MCP server.
+
+    Usage:
+        spicedocs-mcp                    # Use cached docs (download if needed)
+        spicedocs-mcp <archive_path>     # Use local archive (backward compatible)
+        spicedocs-mcp --refresh          # Force re-download to cache
+        spicedocs-mcp --cache-dir        # Show cache directory and exit
+        spicedocs-mcp --help             # Show help message
+    """
     global archive_path, db_conn
-    
-    if len(sys.argv) != 2:
-        print("Usage: python server.py <archive_path>", file=sys.stderr)
+
+    # Parse command-line arguments
+    if len(sys.argv) == 1:
+        # No arguments: use cached documentation
+        try:
+            archive_path = get_or_download_cache()
+            logger.info(f"Using cached documentation at: {archive_path}")
+        except Exception as e:
+            logger.error(f"Failed to initialize documentation cache: {e}")
+            logger.error("Check your network connection and try again.")
+            sys.exit(1)
+
+    elif len(sys.argv) == 2:
+        arg = sys.argv[1]
+
+        if arg in ["--help", "-h"]:
+            print(__doc__)
+            print("\nUsage: spicedocs-mcp [OPTIONS] [ARCHIVE_PATH]")
+            print("\nOptions:")
+            print("  ARCHIVE_PATH      Path to local SPICE documentation archive (optional)")
+            print("  --refresh         Force re-download of cached documentation")
+            print("  --cache-dir       Show cache directory location and exit")
+            print("  --help, -h        Show this help message")
+            print("\nIf ARCHIVE_PATH is not provided, documentation will be automatically")
+            print("downloaded to a platform-appropriate cache directory on first run.")
+            sys.exit(0)
+
+        elif arg == "--cache-dir":
+            print(get_cache_dir())
+            sys.exit(0)
+
+        elif arg == "--refresh":
+            import shutil
+            cache_dir = get_cache_dir()
+            if cache_dir.exists():
+                logger.info(f"Removing existing cache at: {cache_dir}")
+                shutil.rmtree(cache_dir)
+            try:
+                archive_path = get_or_download_cache()
+                logger.info("Cache refreshed successfully")
+            except Exception as e:
+                logger.error(f"Failed to refresh cache: {e}")
+                sys.exit(1)
+
+        else:
+            # Backward compatible: treat as archive path
+            archive_path = Path(arg).resolve()
+            if not archive_path.exists():
+                logger.error(f"Archive path does not exist: {archive_path}")
+                sys.exit(1)
+            logger.info(f"Using local archive at: {archive_path}")
+
+    else:
+        print("Usage: spicedocs-mcp [OPTIONS] [ARCHIVE_PATH]", file=sys.stderr)
+        print("Try 'spicedocs-mcp --help' for more information.", file=sys.stderr)
         sys.exit(1)
-    
-    archive_path = Path(sys.argv[1]).resolve()
-    
-    # Validate archive path exists
-    if not archive_path.exists():
-        logger.error(f"Archive path does not exist: {archive_path}")
-        sys.exit(1)
-    
+
     logger.info(f"Initializing SpiceDocs MCP server with archive: {archive_path}")
-    
+
     try:
         # Initialize database
         db_conn = init_database(archive_path)
-        
+
         # Run the FastMCP server (synchronous)
         mcp.run()
-        
+
     except KeyboardInterrupt:
         logger.info("Server stopped by user")
     except Exception as e:

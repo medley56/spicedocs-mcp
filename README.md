@@ -29,6 +29,7 @@ The easiest way to use SpiceDocs MCP is with Claude Desktop and `uvx`:
 
 - Python 3.10 or higher
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) package manager
+- Internet connection (for first-time documentation download)
 
 ### Installation with Claude Desktop
 
@@ -55,8 +56,7 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
       "args": [
         "--from",
         "git+https://github.com/medley56/spicedocs-mcp",
-        "spicedocs-mcp",
-        "src/spicedocs_mcp/naif.jpl.nasa.gov"
+        "spicedocs-mcp"
       ]
     }
   }
@@ -65,7 +65,7 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 
 3. Restart Claude Desktop
 
-That's it! Claude will now have access to SPICE documentation through the MCP server. The documentation archive is bundled with the repository, so no additional setup is needed.
+On first run, the server will automatically download and cache the NAIF SPICE documentation (~28MB, ~710 HTML files). This takes 2-5 minutes depending on your connection. Subsequent starts are instant.
 
 ## Advanced Installation
 
@@ -109,19 +109,30 @@ archive_directory/
 
 ## Running the Server
 
+### Command-Line Options
+
+```
+spicedocs-mcp [OPTIONS] [ARCHIVE_PATH]
+
+Options:
+  ARCHIVE_PATH      Path to local SPICE documentation archive (optional)
+  --refresh         Force re-download of cached documentation
+  --cache-dir       Show cache directory location and exit
+  --help, -h        Show help message
+```
+
+If ARCHIVE_PATH is not provided, documentation will be automatically downloaded to a platform-appropriate cache directory on first run.
+
 ### For Development/Testing
 
 If you've cloned the repository and want to run the server locally:
 
 ```bash
-# From the project root
-uv run spicedocs-mcp src/spicedocs_mcp/naif.jpl.nasa.gov
-```
+# Use cached/downloaded documentation (recommended)
+uv run spicedocs-mcp
 
-Or using Python directly:
-
-```bash
-uv run python src/spicedocs_mcp/server.py src/spicedocs_mcp/naif.jpl.nasa.gov
+# Or provide a local archive path for testing
+uv run spicedocs-mcp /path/to/local/archive
 ```
 
 ### Using with Claude Desktop (Development Mode)
@@ -135,8 +146,7 @@ If you've cloned the repository and want to use your local version with Claude D
       "command": "uv",
       "args": [
         "run",
-        "spicedocs-mcp",
-        "src/spicedocs_mcp/naif.jpl.nasa.gov"
+        "spicedocs-mcp"
       ],
       "cwd": "/absolute/path/to/your/cloned/spicedocs-mcp"
     }
@@ -145,6 +155,23 @@ If you've cloned the repository and want to use your local version with Claude D
 ```
 
 Replace `/absolute/path/to/your/cloned/spicedocs-mcp` with the actual path to your cloned repository.
+
+**Note:** For development, you can also provide a local archive path if you want to test with a custom documentation set:
+```json
+{
+  "mcpServers": {
+    "spicedocs": {
+      "command": "uv",
+      "args": [
+        "run",
+        "spicedocs-mcp",
+        "/path/to/local/archive"
+      ],
+      "cwd": "/absolute/path/to/your/cloned/spicedocs-mcp"
+    }
+  }
+}
+```
 
 ## Usage Examples
 
@@ -190,16 +217,48 @@ What's the size and structure of the documentation archive?
 
 This uses the `get_archive_stats` tool to get overview information.
 
+## Cache Management
+
+### Cache Location
+
+Documentation is cached in platform-appropriate directories:
+- **Linux**: `~/.cache/spicedocs-mcp/spicedocs`
+- **macOS**: `~/Library/Caches/spicedocs-mcp/spicedocs`
+- **Windows:** `%LOCALAPPDATA%\spicedocs-mcp\spicedocs\Cache`
+
+To see your cache location:
+```bash
+uvx --from git+https://github.com/medley56/spicedocs-mcp spicedocs-mcp --cache-dir
+```
+
+### Refresh Cache
+
+To re-download the documentation (e.g., if NAIF updates their docs):
+```bash
+uvx --from git+https://github.com/medley56/spicedocs-mcp spicedocs-mcp --refresh
+```
+
+### Clear Cache
+
+To free up disk space, delete the cache directory:
+```bash
+# Linux/macOS
+rm -rf ~/.cache/spicedocs-mcp
+
+# Windows
+rmdir /s "%LOCALAPPDATA%\spicedocs-mcp"
+```
+
 ## Database Indexing
 
-The server automatically creates a SQLite database (`.archive_index.db`) in the archive directory on first run. This database:
+The server automatically creates a SQLite database (`.archive_index.db`) in the cache directory on first run. This database:
 
-- Indexes all HTML files in the archive
+- Indexes all HTML files in the downloaded documentation
 - Extracts titles and text content
 - Creates a full-text search index (FTS5) if available
 - Caches metadata for fast retrieval
 
-The index is built automatically if the database is empty. Rebuilding can be triggered by deleting the `.archive_index.db` file.
+The index is built automatically after downloading documentation. To rebuild, use the `--refresh` flag to re-download and re-index.
 
 ## Architecture
 
@@ -208,28 +267,39 @@ Built using:
 - **FastMCP**: Modern MCP server framework
 - **SQLite + FTS5**: Full-text search capabilities
 - **BeautifulSoup**: HTML parsing and text extraction
+- **httpx**: HTTP client for downloading documentation
+- **platformdirs**: Platform-appropriate cache directory management
 - **uv**: Fast Python package and project manager
 
 ## Troubleshooting
 
 ### Server won't start
 
-- Verify the archive path exists and contains HTML files
-- Check that uv dependencies are installed: `uv sync`
-- Look for error messages in the logs (written to stderr)
+- **Network issues**: Check your internet connection if downloading documentation for the first time
+- **Cache directory**: Ensure you have write permissions to the cache directory
+- **Dependencies**: Check that uv dependencies are installed: `uv sync`
+- **Logs**: Look for error messages in the logs (written to stderr)
+
+### First download is slow or fails
+
+- The first run downloads ~28MB of documentation, which may take 2-5 minutes
+- If download fails due to network issues, delete the cache directory and try again
+- Use `--cache-dir` to see where documentation is being cached
+- Check firewall settings if unable to connect to naif.jpl.nasa.gov
 
 ### Search returns no results
 
-- Ensure the database has been built (check for `.archive_index.db` in archive directory)
-- Try rebuilding the index by deleting `.archive_index.db` and restarting the server
+- Ensure the documentation has been downloaded successfully
+- Check the cache directory contains `.archive_index.db`
+- Try refreshing: `spicedocs-mcp --refresh`
 - Check if FTS5 is available in your SQLite installation
 
 ### Claude Desktop doesn't see the server
 
 - Verify the configuration file path and JSON syntax
-- Ensure all paths in the configuration are absolute paths
 - Restart Claude Desktop after modifying the configuration
 - Check Claude Desktop logs for connection errors
+- Ensure uv is installed and in your PATH
 
 ## Development
 
