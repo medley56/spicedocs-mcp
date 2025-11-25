@@ -22,6 +22,12 @@ test = [
     "pytest-timeout>=2.3.0,<3.0.0",
     "pytest-httpserver>=1.0.0,<2.0.0",
 ]
+dev = [
+    "pre-commit>=3.0.0,<4.0.0",
+    "ruff>=0.4.0,<1.0.0",
+    "mypy>=1.0.0,<2.0.0",
+    "types-beautifulsoup4>=4.12.0,<5.0.0",
+]
 
 [project.scripts]
 spicedocs-mcp = "spicedocs_mcp.server:main"
@@ -30,7 +36,44 @@ spicedocs-mcp = "spicedocs_mcp.server:main"
 requires = ["uv_build"]
 build-backend = "uv_build"
 
-[dependency-groups]
-dev = [
-    "ruff>=0.14.6",
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+exclude = [
+    "^build/",
+    "^dist/",
 ]
+
+[[tool.mypy.overrides]]
+module = [
+    "mcp.*",
+    "fastmcp.*",
+    "platformdirs",
+    "httpx",
+    "pytest_httpserver.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # Pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+]
+ignore = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["spicedocs_mcp"]

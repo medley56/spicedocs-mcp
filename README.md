@@ -317,11 +317,62 @@ If FTS5 is missing, you can still use the server - it will fall back to basic LI
 
 ## Development
 
-To modify or extend the server:
+### Setting Up the Development Environment
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/medley56/spicedocs-mcp
+cd spicedocs-mcp
+```
+
+2. Install all dependencies (including dev and test):
+
+```bash
+uv sync --all-extras
+```
+
+3. Install pre-commit hooks:
+
+```bash
+# Install pre-commit (if not already installed)
+pip install pre-commit
+# or
+pipx install pre-commit
+
+# Install the git hooks
+pre-commit install
+```
+
+### Code Quality Tools
+
+This project uses pre-commit hooks to ensure code quality:
+
+- **ruff**: Fast Python linter and formatter
+- **mypy**: Static type checking
+- **trailing-whitespace**: Remove trailing whitespace
+- **end-of-file-fixer**: Ensure files end with a newline
+- **check-yaml**: Validate YAML files
+- **check-added-large-files**: Prevent large files from being committed
+
+Run all checks manually:
+
+```bash
+pre-commit run --all-files
+```
+
+### Running Tests
+
+```bash
+uv run pytest tests/ -v
+```
+
+### Making Changes
 
 1. Edit [server.py](src/spicedocs_mcp/server.py)
 2. Add new tools using the `@mcp.tool()` decorator
-3. Test changes by running the server directly
+3. Run pre-commit hooks before committing
+4. Test changes by running the server directly
 
 ## License
 

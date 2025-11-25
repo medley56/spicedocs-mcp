@@ -12,9 +12,7 @@ from pytest_httpserver import HTTPServer
 def test_cli_help():
     """Test --help flag shows usage information."""
     result = subprocess.run(
-        [sys.executable, "-m", "spicedocs_mcp.server", "--help"],
-        capture_output=True,
-        text=True
+        [sys.executable, "-m", "spicedocs_mcp.server", "--help"], capture_output=True, text=True
     )
 
     assert result.returncode == 0
@@ -30,7 +28,7 @@ def test_cli_cache_dir(tmp_path, monkeypatch):
     result = subprocess.run(
         [sys.executable, "-m", "spicedocs_mcp.server", "--cache-dir"],
         capture_output=True,
-        text=True
+        text=True,
     )
 
     assert result.returncode == 0
@@ -70,15 +68,13 @@ def test_cache_initialization_with_mock_server(httpserver: HTTPServer, tmp_path,
     # Set up minimal mock NAIF server
     httpserver.expect_request(f"{base_path}").respond_with_data(
         f'<html><body><a href="{base_path}index.html">Index</a></body></html>',
-        content_type="text/html"
+        content_type="text/html",
     )
     httpserver.expect_request(f"{base_path}index.html").respond_with_data(
-        '<html><body><a href="cspice/test.html">Test</a></body></html>',
-        content_type="text/html"
+        '<html><body><a href="cspice/test.html">Test</a></body></html>', content_type="text/html"
     )
     httpserver.expect_request(f"{base_path}cspice/test.html").respond_with_data(
-        '<html><body>Test documentation</body></html>',
-        content_type="text/html"
+        "<html><body>Test documentation</body></html>", content_type="text/html"
     )
 
     cache_dir = tmp_path / "cache"
@@ -108,11 +104,8 @@ def test_cache_reuse_on_second_call(tmp_path, monkeypatch):
     doc_dir.mkdir(parents=True)
 
     # Create valid cache
-    version_data = {
-        "version": "1.0",
-        "completed": True
-    }
-    with open(cache_dir / ".cache_version", 'w') as f:
+    version_data = {"version": "1.0", "completed": True}
+    with open(cache_dir / ".cache_version", "w") as f:
         json.dump(version_data, f)
 
     # Create sufficient HTML files
@@ -140,11 +133,10 @@ def test_refresh_flag_forces_redownload(httpserver: HTTPServer, tmp_path, monkey
     # Set up minimal mock server
     httpserver.expect_request(f"{base_path}").respond_with_data(
         f'<html><body><a href="{base_path}index.html">Index</a></body></html>',
-        content_type="text/html"
+        content_type="text/html",
     )
     httpserver.expect_request(f"{base_path}index.html").respond_with_data(
-        '<html><body>New content</body></html>',
-        content_type="text/html"
+        "<html><body>New content</body></html>", content_type="text/html"
     )
 
     cache_dir = tmp_path / "cache"
@@ -152,11 +144,8 @@ def test_refresh_flag_forces_redownload(httpserver: HTTPServer, tmp_path, monkey
     doc_dir.mkdir(parents=True)
 
     # Create old cache
-    version_data = {
-        "version": "1.0",
-        "completed": True
-    }
-    with open(cache_dir / ".cache_version", 'w') as f:
+    version_data = {"version": "1.0", "completed": True}
+    with open(cache_dir / ".cache_version", "w") as f:
         json.dump(version_data, f)
 
     monkeypatch.setenv("SPICEDOCS_CACHE_DIR", str(cache_dir))
@@ -164,6 +153,7 @@ def test_refresh_flag_forces_redownload(httpserver: HTTPServer, tmp_path, monkey
 
     # Simulate --refresh by removing cache and re-downloading
     import shutil
+
     from spicedocs_mcp.cache import get_or_download_cache
 
     # Remove old cache
@@ -185,22 +175,19 @@ def test_database_location_in_cache_dir(tmp_path, monkeypatch):
     doc_dir.mkdir(parents=True)
 
     # Create valid cache
-    version_data = {
-        "version": "1.0",
-        "completed": True
-    }
-    with open(cache_dir / ".cache_version", 'w') as f:
+    version_data = {"version": "1.0", "completed": True}
+    with open(cache_dir / ".cache_version", "w") as f:
         json.dump(version_data, f)
 
     # Create sufficient HTML files
     for i in range(510):
-        (doc_dir / f"page{i}.html").write_text('<html><body>Test</body></html>')
+        (doc_dir / f"page{i}.html").write_text("<html><body>Test</body></html>")
 
     monkeypatch.setenv("SPICEDOCS_CACHE_DIR", str(cache_dir))
 
-    from spicedocs_mcp.server import init_database
     import spicedocs_mcp.server as server_module
-    from spicedocs_mcp.cache import get_or_download_cache, get_cache_dir
+    from spicedocs_mcp.cache import get_cache_dir, get_or_download_cache
+    from spicedocs_mcp.server import init_database
 
     archive_path = get_or_download_cache()
 
