@@ -73,17 +73,9 @@ def init_database(archive_dir: Path) -> None:
     """
     global db_path, fts_available
 
-    # Store database in cache directory if using cached documentation,
-    # otherwise store it in the archive directory (for backward compatibility)
+    # Always store database in cache directory
     cache_dir = get_cache_dir()
-    naif_path = cache_dir / "naif.jpl.nasa.gov"
-
-    if archive_dir == naif_path:
-        # Using cached documentation - store DB in cache directory
-        db_path = cache_dir / ".archive_index.db"
-    else:
-        # Using local archive - store DB in archive directory (backward compatible)
-        db_path = archive_dir / ".archive_index.db"
+    db_path = cache_dir / ".archive_index.db"
 
     # Use a temporary connection for schema setup and indexing
     with sqlite3.connect(str(db_path)) as conn:
@@ -470,7 +462,6 @@ def main():
 
     Usage:
         spicedocs-mcp                    # Use cached docs (download if needed)
-        spicedocs-mcp <archive_path>     # Use local archive (backward compatible)
         spicedocs-mcp --refresh          # Force re-download to cache
         spicedocs-mcp --cache-dir        # Show cache directory and exit
         spicedocs-mcp --help             # Show help message
@@ -493,14 +484,13 @@ def main():
 
         if arg in ["--help", "-h"]:
             print(__doc__)
-            print("\nUsage: spicedocs-mcp [OPTIONS] [ARCHIVE_PATH]")
+            print("\nUsage: spicedocs-mcp [OPTIONS]")
             print("\nOptions:")
-            print("  ARCHIVE_PATH      Path to local SPICE documentation archive (optional)")
             print("  --refresh         Force re-download of cached documentation")
             print("  --cache-dir       Show cache directory location and exit")
             print("  --help, -h        Show this help message")
-            print("\nIf ARCHIVE_PATH is not provided, documentation will be automatically")
-            print("downloaded to a platform-appropriate cache directory on first run.")
+            print("\nDocumentation is automatically downloaded to a platform-appropriate")
+            print("cache directory on first run. Use --cache-dir to see the location.")
             sys.exit(0)
 
         elif arg == "--cache-dir":
@@ -521,15 +511,23 @@ def main():
                 sys.exit(1)
 
         else:
-            # Backward compatible: treat as archive path
-            archive_path = Path(arg).resolve()
-            if not archive_path.exists():
-                logger.error(f"Archive path does not exist: {archive_path}")
-                sys.exit(1)
-            logger.info(f"Using local archive at: {archive_path}")
+            # Unknown argument - show error with migration message
+            print(f"Error: Unknown argument '{arg}'", file=sys.stderr)
+            print("", file=sys.stderr)
+            print("Note: Custom archive paths are no longer supported.", file=sys.stderr)
+            print("Documentation is now automatically downloaded and cached.", file=sys.stderr)
+            print("", file=sys.stderr)
+            print("Usage: spicedocs-mcp [OPTIONS]", file=sys.stderr)
+            print("Try 'spicedocs-mcp --help' for more information.", file=sys.stderr)
+            sys.exit(1)
 
     else:
-        print("Usage: spicedocs-mcp [OPTIONS] [ARCHIVE_PATH]", file=sys.stderr)
+        print("Error: Too many arguments", file=sys.stderr)
+        print("", file=sys.stderr)
+        print("Note: Custom archive paths are no longer supported.", file=sys.stderr)
+        print("Documentation is now automatically downloaded and cached.", file=sys.stderr)
+        print("", file=sys.stderr)
+        print("Usage: spicedocs-mcp [OPTIONS]", file=sys.stderr)
         print("Try 'spicedocs-mcp --help' for more information.", file=sys.stderr)
         sys.exit(1)
 

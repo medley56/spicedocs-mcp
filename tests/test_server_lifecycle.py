@@ -1,14 +1,17 @@
 """Tests for server initialization, database setup, and lifecycle management."""
 
-import sqlite3
-from pathlib import Path
 from spicedocs_mcp.server import init_database, get_connection
 import spicedocs_mcp.server as server_module
 
 
-def test_database_initialization(test_archive):
+def test_database_initialization(test_archive, tmp_path, monkeypatch):
     """Test that database is created and initialized correctly."""
-    db_path = test_archive / ".archive_index.db"
+    # Set cache directory to temp path for test isolation
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    monkeypatch.setenv("SPICEDOCS_CACHE_DIR", str(cache_dir))
+
+    db_path = cache_dir / ".archive_index.db"
 
     # Database shouldn't exist yet
     assert not db_path.exists()
@@ -41,8 +44,13 @@ def test_database_initialization(test_archive):
         server_module.fts_available = False
 
 
-def test_fts5_detection(test_archive):
+def test_fts5_detection(test_archive, tmp_path, monkeypatch):
     """Test that FTS5 availability is detected correctly."""
+    # Set cache directory to temp path for test isolation
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    monkeypatch.setenv("SPICEDOCS_CACHE_DIR", str(cache_dir))
+
     server_module.archive_path = test_archive
     init_database(test_archive)
 
@@ -70,8 +78,13 @@ def test_fts5_detection(test_archive):
         server_module.fts_available = False
 
 
-def test_index_building(test_archive):
+def test_index_building(test_archive, tmp_path, monkeypatch):
     """Test that index contains correct data for test files."""
+    # Set cache directory to temp path for test isolation
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    monkeypatch.setenv("SPICEDOCS_CACHE_DIR", str(cache_dir))
+
     server_module.archive_path = test_archive
     init_database(test_archive)
 
@@ -111,8 +124,13 @@ def test_index_building(test_archive):
         server_module.fts_available = False
 
 
-def test_database_persistence(test_archive):
+def test_database_persistence(test_archive, tmp_path, monkeypatch):
     """Test that database persists and doesn't rebuild unnecessarily."""
+    # Set cache directory to temp path for test isolation
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    monkeypatch.setenv("SPICEDOCS_CACHE_DIR", str(cache_dir))
+
     # Initialize database first time
     server_module.archive_path = test_archive
     init_database(test_archive)

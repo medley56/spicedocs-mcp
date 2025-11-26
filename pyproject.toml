@@ -29,3 +29,8 @@ spicedocs-mcp = "spicedocs_mcp.server:main"
 [build-system]
 requires = ["uv_build"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.6",
+]

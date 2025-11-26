@@ -1,7 +1,6 @@
 """Pytest configuration and shared fixtures for SpiceDocs MCP server tests."""
 
 import pytest
-from pathlib import Path
 from tests.fixtures.test_data import build_minimal_archive
 import spicedocs_mcp.server as server_module
 from spicedocs_mcp.server import mcp, init_database
@@ -25,11 +24,12 @@ def test_archive(tmp_path):
 
 
 @pytest.fixture
-def initialized_server(test_archive):
+def initialized_server(test_archive, tmp_path, monkeypatch):
     """
     Initialize server with test archive and set up global state.
 
     This fixture:
+    - Sets SPICEDOCS_CACHE_DIR to use temp directory for database storage
     - Sets global archive_path, db_path, and fts_available
     - Initializes SQLite database schema and index
     - Yields the FastMCP server instance
@@ -37,10 +37,17 @@ def initialized_server(test_archive):
 
     Args:
         test_archive: Path to test archive (from test_archive fixture)
+        tmp_path: Pytest temporary path fixture
+        monkeypatch: Pytest monkeypatch fixture for environment variables
 
     Yields:
         FastMCP: The initialized MCP server instance
     """
+    # Set cache directory to temp path for test isolation
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    monkeypatch.setenv("SPICEDOCS_CACHE_DIR", str(cache_dir))
+
     # Set global state required by current server implementation
     server_module.archive_path = test_archive
     init_database(test_archive)  # Sets db_path and fts_available globals

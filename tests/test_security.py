@@ -1,6 +1,5 @@
 """Security tests for path traversal protection and input validation."""
 
-import pytest
 
 
 # ============================================================================
