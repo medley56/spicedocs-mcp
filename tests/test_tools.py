@@ -1,7 +1,6 @@
 """Integration tests for all 5 MCP tools."""
 
 
-
 # ============================================================================
 # search_archive tool tests
 # ============================================================================
@@ -9,10 +8,7 @@
 
 async def test_search_archive_basic(client):
     """Test basic search with results."""
-    result = await client.call_tool("search_archive", {
-        "query": "ephemeris",
-        "limit": 5
-    })
+    result = await client.call_tool("search_archive", {"query": "ephemeris", "limit": 5})
 
     assert len(result.content) > 0
     content = result.content[0].text
@@ -25,9 +21,7 @@ async def test_search_archive_basic(client):
 
 async def test_search_archive_no_results(client):
     """Test search with no matching results."""
-    result = await client.call_tool("search_archive", {
-        "query": "nonexistent_keyword_xyz_12345"
-    })
+    result = await client.call_tool("search_archive", {"query": "nonexistent_keyword_xyz_12345"})
 
     content = result.content[0].text
     assert "No results found" in content
@@ -35,25 +29,22 @@ async def test_search_archive_no_results(client):
 
 async def test_search_archive_limit(client):
     """Test that limit parameter is respected."""
-    result = await client.call_tool("search_archive", {
-        "query": "SPICE",
-        "limit": 2
-    })
+    result = await client.call_tool("search_archive", {"query": "SPICE", "limit": 2})
 
     content = result.content[0].text
 
     # Check that we got results but limited
     if "Found" in content:
         # Count the number of result entries (each has a number prefix like "1.")
-        result_count = sum(1 for line in content.split('\n') if line.strip().startswith(('1.', '2.', '3.')))
+        result_count = sum(
+            1 for line in content.split("\n") if line.strip().startswith(("1.", "2.", "3."))
+        )
         assert result_count <= 2
 
 
 async def test_search_archive_multiple_keywords(client):
     """Test search with multiple keywords."""
-    result = await client.call_tool("search_archive", {
-        "query": "kernel SPK"
-    })
+    result = await client.call_tool("search_archive", {"query": "kernel SPK"})
 
     content = result.content[0].text
     # Should find page about kernels
@@ -67,9 +58,7 @@ async def test_search_archive_multiple_keywords(client):
 
 async def test_get_page_valid(client):
     """Test retrieving a valid page."""
-    result = await client.call_tool("get_page", {
-        "path": "index.html"
-    })
+    result = await client.call_tool("get_page", {"path": "index.html"})
 
     content = result.content[0].text
 
@@ -80,9 +69,7 @@ async def test_get_page_valid(client):
 
 async def test_get_page_nested(client):
     """Test retrieving a page in a subdirectory."""
-    result = await client.call_tool("get_page", {
-        "path": "subdir/nested.html"
-    })
+    result = await client.call_tool("get_page", {"path": "subdir/nested.html"})
 
     content = result.content[0].text
 
@@ -92,9 +79,7 @@ async def test_get_page_nested(client):
 
 async def test_get_page_deep_nested(client):
     """Test retrieving a deeply nested page."""
-    result = await client.call_tool("get_page", {
-        "path": "subdir/deep/deeper.html"
-    })
+    result = await client.call_tool("get_page", {"path": "subdir/deep/deeper.html"})
 
     content = result.content[0].text
 
@@ -104,9 +89,7 @@ async def test_get_page_deep_nested(client):
 
 async def test_get_page_not_found(client):
     """Test retrieving a non-existent page."""
-    result = await client.call_tool("get_page", {
-        "path": "does_not_exist.html"
-    })
+    result = await client.call_tool("get_page", {"path": "does_not_exist.html"})
 
     content = result.content[0].text
     assert "Error" in content
@@ -115,10 +98,7 @@ async def test_get_page_not_found(client):
 
 async def test_get_page_with_raw_html(client):
     """Test retrieving page with raw HTML included."""
-    result = await client.call_tool("get_page", {
-        "path": "index.html",
-        "include_raw": True
-    })
+    result = await client.call_tool("get_page", {"path": "index.html", "include_raw": True})
 
     content = result.content[0].text
 
@@ -147,9 +127,7 @@ async def test_list_pages_all(client):
 
 async def test_list_pages_with_glob_filter(client):
     """Test listing pages with GLOB pattern filter."""
-    result = await client.call_tool("list_pages", {
-        "filter_pattern": "page_*.html"
-    })
+    result = await client.call_tool("list_pages", {"filter_pattern": "page_*.html"})
 
     content = result.content[0].text
 
@@ -163,9 +141,7 @@ async def test_list_pages_with_glob_filter(client):
 
 async def test_list_pages_with_subdir_filter(client):
     """Test listing pages in subdirectory."""
-    result = await client.call_tool("list_pages", {
-        "filter_pattern": "subdir/*"
-    })
+    result = await client.call_tool("list_pages", {"filter_pattern": "subdir/*"})
 
     content = result.content[0].text
 
@@ -175,15 +151,13 @@ async def test_list_pages_with_subdir_filter(client):
 
 async def test_list_pages_with_limit(client):
     """Test that limit parameter is respected."""
-    result = await client.call_tool("list_pages", {
-        "limit": 2
-    })
+    result = await client.call_tool("list_pages", {"limit": 2})
 
     content = result.content[0].text
 
     # Should return at most 2 pages
-    lines = content.split('\n')
-    page_mentions = sum(1 for line in lines if '.html' in line and 'Path:' in line)
+    lines = content.split("\n")
+    page_mentions = sum(1 for line in lines if ".html" in line and "Path:" in line)
     assert page_mentions <= 2
 
 
@@ -194,10 +168,9 @@ async def test_list_pages_with_limit(client):
 
 async def test_extract_links_internal_only(client):
     """Test extracting only internal links from a page."""
-    result = await client.call_tool("extract_links", {
-        "path": "page_links.html",
-        "internal_only": True
-    })
+    result = await client.call_tool(
+        "extract_links", {"path": "page_links.html", "internal_only": True}
+    )
 
     content = result.content[0].text
 
@@ -212,10 +185,9 @@ async def test_extract_links_internal_only(client):
 
 async def test_extract_links_all(client):
     """Test extracting all links including external."""
-    result = await client.call_tool("extract_links", {
-        "path": "page_links.html",
-        "internal_only": False
-    })
+    result = await client.call_tool(
+        "extract_links", {"path": "page_links.html", "internal_only": False}
+    )
 
     content = result.content[0].text
 
@@ -226,10 +198,9 @@ async def test_extract_links_all(client):
 
 async def test_extract_links_relative_paths(client):
     """Test that relative links from nested pages are extracted."""
-    result = await client.call_tool("extract_links", {
-        "path": "subdir/nested.html",
-        "internal_only": True
-    })
+    result = await client.call_tool(
+        "extract_links", {"path": "subdir/nested.html", "internal_only": True}
+    )
 
     content = result.content[0].text
 
@@ -239,10 +210,9 @@ async def test_extract_links_relative_paths(client):
 
 async def test_extract_links_deeply_nested(client):
     """Test link extraction from deeply nested page."""
-    result = await client.call_tool("extract_links", {
-        "path": "subdir/deep/deeper.html",
-        "internal_only": True
-    })
+    result = await client.call_tool(
+        "extract_links", {"path": "subdir/deep/deeper.html", "internal_only": True}
+    )
 
     content = result.content[0].text
 
@@ -252,9 +222,7 @@ async def test_extract_links_deeply_nested(client):
 
 async def test_extract_links_page_not_found(client):
     """Test link extraction from non-existent page."""
-    result = await client.call_tool("extract_links", {
-        "path": "does_not_exist.html"
-    })
+    result = await client.call_tool("extract_links", {"path": "does_not_exist.html"})
 
     content = result.content[0].text
     assert "Error" in content

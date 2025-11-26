@@ -4,10 +4,7 @@ from pathlib import Path
 
 
 def create_test_html(
-    title: str,
-    body: str,
-    links: list[str] | None = None,
-    external_links: list[str] | None = None
+    title: str, body: str, links: list[str] | None = None, external_links: list[str] | None = None
 ) -> str:
     """
     Generate HTML test content with consistent structure.
@@ -23,7 +20,7 @@ def create_test_html(
     """
     links_html = ""
     if links or external_links:
-        all_links = []
+        all_links: list[str] = []
         if links:
             all_links.extend(f'<a href="{url}">{url}</a>' for url in links)
         if external_links:
@@ -60,7 +57,7 @@ def build_minimal_archive(base_dir: Path) -> None:
         create_test_html(
             "SPICE Documentation Index",
             "Welcome to the SPICE toolkit documentation. This is a test archive.",
-            links=["page_kernels.html", "page_time.html", "page_links.html", "subdir/nested.html"]
+            links=["page_kernels.html", "page_time.html", "page_links.html", "subdir/nested.html"],
         )
     )
 
@@ -68,8 +65,9 @@ def build_minimal_archive(base_dir: Path) -> None:
     (base_dir / "page_kernels.html").write_text(
         create_test_html(
             "SPICE Kernels Guide",
-            "Information about SPICE kernel files including SPK ephemeris kernels and CK attitude kernels.",
-            links=["page_time.html", "index.html"]
+            "Information about SPICE kernel files including SPK ephemeris "
+            "kernels and CK attitude kernels.",
+            links=["page_time.html", "index.html"],
         )
     )
 
@@ -77,8 +75,9 @@ def build_minimal_archive(base_dir: Path) -> None:
     (base_dir / "page_time.html").write_text(
         create_test_html(
             "Time Systems in SPICE",
-            "Documentation about ephemeris time, UTC, and other time systems used in SPICE calculations.",
-            links=["index.html", "page_kernels.html"]
+            "Documentation about ephemeris time, UTC, and other time systems "
+            "used in SPICE calculations.",
+            links=["index.html", "page_kernels.html"],
         )
     )
 
@@ -88,7 +87,7 @@ def build_minimal_archive(base_dir: Path) -> None:
             "Links Test Page",
             "This page contains various types of links for testing link extraction.",
             links=["index.html", "./page_kernels.html", "subdir/nested.html"],
-            external_links=["https://naif.jpl.nasa.gov/", "https://example.com/test"]
+            external_links=["https://naif.jpl.nasa.gov/", "https://example.com/test"],
         )
     )
 
@@ -97,7 +96,7 @@ def build_minimal_archive(base_dir: Path) -> None:
         create_test_html(
             "Nested Page",
             "This is a nested page in a subdirectory with relative links.",
-            links=["../index.html", "../page_kernels.html", "deep/deeper.html"]
+            links=["../index.html", "../page_kernels.html", "deep/deeper.html"],
         )
     )
 
@@ -106,6 +105,6 @@ def build_minimal_archive(base_dir: Path) -> None:
         create_test_html(
             "Deeply Nested Page",
             "This is a deeply nested page for testing path resolution.",
-            links=["../../index.html", "../nested.html"]
+            links=["../../index.html", "../nested.html"],
         )
     )

@@ -5,6 +5,15 @@
 # Install uv dependencies
 uv sync --all-extras
 
+# Install pre-commit hooks
+echo "Installing pre-commit hooks..."
+if command -v pre-commit &> /dev/null; then
+    pre-commit install
+    echo "Pre-commit hooks installed successfully."
+else
+    echo "Warning: pre-commit not found. Install it with 'pip install pre-commit' or 'pipx install pre-commit'"
+fi
+
 # Configure Git
 
 # Check current configuration before changing anything

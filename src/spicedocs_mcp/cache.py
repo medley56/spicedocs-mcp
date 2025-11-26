@@ -8,7 +8,6 @@ import time
 from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Set
 from urllib.parse import urljoin, urlparse
 
 import httpx
@@ -64,14 +63,14 @@ def is_cache_valid(cache_dir: Path) -> bool:
 
     # Validate version file JSON
     try:
-        with open(version_file, 'r') as f:
+        with open(version_file) as f:
             version_data = json.load(f)
 
         if not version_data.get("completed", False):
             logger.debug("Cache download not completed")
             return False
 
-    except (json.JSONDecodeError, IOError) as e:
+    except (OSError, json.JSONDecodeError) as e:
         logger.debug(f"Failed to read cache version file: {e}")
         return False
 
@@ -169,8 +168,10 @@ def download_with_retry(client: httpx.Client, url: str, max_retries: int = 3) ->
             # Retry 5xx errors
             elif e.response.status_code >= 500:
                 if attempt < max_retries - 1:
-                    sleep_time = 2 ** attempt
-                    logger.warning(f"Server error {e.response.status_code}, retrying in {sleep_time}s...")
+                    sleep_time = 2**attempt
+                    logger.warning(
+                        f"Server error {e.response.status_code}, retrying in {sleep_time}s..."
+                    )
                     time.sleep(sleep_time)
                     continue
                 else:
@@ -182,13 +183,16 @@ def download_with_retry(client: httpx.Client, url: str, max_retries: int = 3) ->
 
         except (httpx.ConnectError, httpx.TimeoutException) as e:
             if attempt < max_retries - 1:
-                sleep_time = 2 ** attempt
+                sleep_time = 2**attempt
                 logger.warning(f"Network error, retrying in {sleep_time}s: {e}")
                 time.sleep(sleep_time)
                 continue
             else:
                 logger.error(f"Network error after {max_retries} attempts: {url}")
                 raise
+
+    # This is reached only if max_retries is 0 (loop never executes)
+    raise RuntimeError(f"No retry attempts made for {url} (max_retries=0)")
 
 
 def download_documentation(base_url: str, cache_dir: Path) -> None:
@@ -226,16 +230,16 @@ def download_documentation(base_url: str, cache_dir: Path) -> None:
         disk_usage = shutil.disk_usage(temp_dir)
         available_mb = disk_usage.free / (1024 * 1024)
         if available_mb < 100:
-            raise OSError(f"Insufficient disk space: {available_mb:.1f} MB available, 100 MB required")
+            raise OSError(
+                f"Insufficient disk space: {available_mb:.1f} MB available, 100 MB required"
+            )
 
         # Initialize HTTP client
-        headers = {
-            "User-Agent": "SpiceDocs-MCP/0.1.0 (https://github.com/medley56/spicedocs-mcp)"
-        }
+        headers = {"User-Agent": "SpiceDocs-MCP/0.1.0 (https://github.com/medley56/spicedocs-mcp)"}
         client = httpx.Client(headers=headers, follow_redirects=True)
 
         # BFS crawl
-        visited: Set[str] = set()
+        visited: set[str] = set()
         queue = deque([base_url])
         file_count = 0
 
@@ -243,7 +247,7 @@ def download_documentation(base_url: str, cache_dir: Path) -> None:
             url = queue.popleft()
 
             # Normalize URL (remove fragments and trailing slash for comparison)
-            normalized_url = url.split('#')[0].rstrip('/')
+            normalized_url = url.split("#")[0].rstrip("/")
             if normalized_url in visited:
                 continue
 
@@ -261,13 +265,13 @@ def download_documentation(base_url: str, cache_dir: Path) -> None:
                 # Determine save path
                 parsed = urlparse(url)
 
-                # Always save under naif.jpl.nasa.gov, even if downloading from localhost (for testing)
-                # This ensures consistent directory structure
-                rel_path = parsed.path.lstrip('/')
+                # Always save under naif.jpl.nasa.gov, even if downloading
+                # from localhost (for testing). This ensures consistent structure.
+                rel_path = parsed.path.lstrip("/")
 
                 # Handle directory indices
-                if rel_path.endswith('/'):
-                    rel_path += 'index.html'
+                if rel_path.endswith("/"):
+                    rel_path += "index.html"
 
                 # Use consistent host name (naif.jpl.nasa.gov) instead of actual host
                 save_path = temp_dir / "naif.jpl.nasa.gov" / rel_path
@@ -282,15 +286,15 @@ def download_documentation(base_url: str, cache_dir: Path) -> None:
 
                 # Parse HTML to find links
                 try:
-                    soup = BeautifulSoup(response.content, 'html.parser')
-                    for link in soup.find_all('a', href=True):
-                        href = link['href']
+                    soup = BeautifulSoup(response.content, "html.parser")
+                    for link in soup.find_all("a", href=True):
+                        href = link["href"]
 
                         # Convert relative URLs to absolute
                         absolute_url = urljoin(url, href)
 
                         # Remove fragments
-                        absolute_url = absolute_url.split('#')[0]
+                        absolute_url = absolute_url.split("#")[0]
 
                         if should_download(absolute_url, base_url):
                             queue.append(absolute_url)
@@ -317,11 +321,11 @@ def download_documentation(base_url: str, cache_dir: Path) -> None:
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "base_url": base_url,
             "file_count": file_count,
-            "completed": True
+            "completed": True,
         }
 
         version_file = temp_dir / ".cache_version"
-        with open(version_file, 'w') as f:
+        with open(version_file, "w") as f:
             json.dump(version_data, f, indent=2)
 
         # Atomic rename to final location

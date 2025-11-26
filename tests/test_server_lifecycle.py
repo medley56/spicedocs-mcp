@@ -1,7 +1,7 @@
 """Tests for server initialization, database setup, and lifecycle management."""
 
-from spicedocs_mcp.server import init_database, get_connection
 import spicedocs_mcp.server as server_module
+from spicedocs_mcp.server import get_connection, init_database
 
 
 def test_database_initialization(test_archive, tmp_path, monkeypatch):

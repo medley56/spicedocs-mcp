@@ -7,13 +7,13 @@ import pytest
 from pytest_httpserver import HTTPServer
 
 from spicedocs_mcp.cache import (
+    DEFAULT_BASE_URL,
+    download_documentation,
+    download_with_retry,
     get_cache_dir,
+    get_or_download_cache,
     is_cache_valid,
     should_download,
-    download_with_retry,
-    download_documentation,
-    get_or_download_cache,
-    DEFAULT_BASE_URL,
 )
 
 
@@ -60,11 +60,8 @@ def test_is_cache_valid_incomplete_download(tmp_path):
     (cache_dir / "naif.jpl.nasa.gov").mkdir()
 
     # Create version file with completed=false
-    version_data = {
-        "version": "1.0",
-        "completed": False
-    }
-    with open(cache_dir / ".cache_version", 'w') as f:
+    version_data = {"version": "1.0", "completed": False}
+    with open(cache_dir / ".cache_version", "w") as f:
         json.dump(version_data, f)
 
     assert not is_cache_valid(cache_dir)
@@ -77,11 +74,8 @@ def test_is_cache_valid_insufficient_files(tmp_path):
     doc_dir.mkdir(parents=True)
 
     # Create version file
-    version_data = {
-        "version": "1.0",
-        "completed": True
-    }
-    with open(cache_dir / ".cache_version", 'w') as f:
+    version_data = {"version": "1.0", "completed": True}
+    with open(cache_dir / ".cache_version", "w") as f:
         json.dump(version_data, f)
 
     # Create only a few HTML files (less than MIN_FILE_COUNT)
@@ -98,12 +92,8 @@ def test_is_cache_valid_valid_cache(tmp_path):
     doc_dir.mkdir(parents=True)
 
     # Create version file
-    version_data = {
-        "version": "1.0",
-        "completed": True,
-        "file_count": 600
-    }
-    with open(cache_dir / ".cache_version", 'w') as f:
+    version_data = {"version": "1.0", "completed": True, "file_count": 600}
+    with open(cache_dir / ".cache_version", "w") as f:
         json.dump(version_data, f)
 
     # Create sufficient HTML files
@@ -118,7 +108,9 @@ def test_should_download_valid_html():
     base_url = DEFAULT_BASE_URL
 
     assert should_download("https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/index.html", base_url)
-    assert should_download("https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/cspice/spkpos_c.html", base_url)
+    assert should_download(
+        "https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/cspice/spkpos_c.html", base_url
+    )
     assert should_download("https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/ug/", base_url)
 
 
@@ -142,9 +134,15 @@ def test_should_download_non_html():
     """Test URL filtering rejects non-HTML files."""
     base_url = DEFAULT_BASE_URL
 
-    assert not should_download("https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/style.css", base_url)
-    assert not should_download("https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/script.js", base_url)
-    assert not should_download("https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/image.png", base_url)
+    assert not should_download(
+        "https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/style.css", base_url
+    )
+    assert not should_download(
+        "https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/script.js", base_url
+    )
+    assert not should_download(
+        "https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/image.png", base_url
+    )
 
 
 def test_download_with_retry_success(httpserver: HTTPServer):
@@ -192,22 +190,20 @@ def test_download_documentation(httpserver: HTTPServer, tmp_path, monkeypatch):
     # Use oneshot=False to allow multiple requests to same URL
     httpserver.expect_oneshot_request(f"{base_path}").respond_with_data(
         f'<html><body><a href="{base_path}index.html">Index</a></body></html>',
-        content_type="text/html"
+        content_type="text/html",
     )
     httpserver.expect_oneshot_request(f"{base_path}index.html").respond_with_data(
-        '<html><body>'
+        "<html><body>"
         '<a href="cspice/spkpos_c.html">spkpos_c</a>'
         '<a href="ug/index.html">User Guide</a>'
-        '</body></html>',
-        content_type="text/html"
+        "</body></html>",
+        content_type="text/html",
     )
     httpserver.expect_oneshot_request(f"{base_path}cspice/spkpos_c.html").respond_with_data(
-        '<html><body>SPKPOS documentation</body></html>',
-        content_type="text/html"
+        "<html><body>SPKPOS documentation</body></html>", content_type="text/html"
     )
     httpserver.expect_oneshot_request(f"{base_path}ug/index.html").respond_with_data(
-        '<html><body>User Guide</body></html>',
-        content_type="text/html"
+        "<html><body>User Guide</body></html>", content_type="text/html"
     )
 
     cache_dir = tmp_path / "cache"
@@ -242,11 +238,8 @@ def test_get_or_download_cache_with_valid_cache(tmp_path, monkeypatch):
     doc_dir.mkdir(parents=True)
 
     # Create valid cache
-    version_data = {
-        "version": "1.0",
-        "completed": True
-    }
-    with open(cache_dir / ".cache_version", 'w') as f:
+    version_data = {"version": "1.0", "completed": True}
+    with open(cache_dir / ".cache_version", "w") as f:
         json.dump(version_data, f)
 
     # Create sufficient HTML files
@@ -302,19 +295,16 @@ def test_download_documentation_handles_404(httpserver: HTTPServer, tmp_path):
 
     # Set up mock with a 404 link
     httpserver.expect_request(f"{base_path}").respond_with_data(
-        f'<html><body>'
+        f"<html><body>"
         f'<a href="{base_path}index.html">Index</a>'
         f'<a href="{base_path}missing.html">Missing</a>'
-        f'</body></html>',
-        content_type="text/html"
+        f"</body></html>",
+        content_type="text/html",
     )
     httpserver.expect_request(f"{base_path}index.html").respond_with_data(
-        '<html><body>Index page</body></html>',
-        content_type="text/html"
+        "<html><body>Index page</body></html>", content_type="text/html"
     )
-    httpserver.expect_request(f"{base_path}missing.html").respond_with_data(
-        '', status=404
-    )
+    httpserver.expect_request(f"{base_path}missing.html").respond_with_data("", status=404)
 
     cache_dir = tmp_path / "cache"
     base_url = httpserver.url_for(base_path)
