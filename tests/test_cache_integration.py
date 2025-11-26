@@ -38,9 +38,7 @@ def test_cli_cache_dir(tmp_path, monkeypatch):
 def test_archive_path_argument_rejected():
     """Test that providing archive path argument shows error with migration message."""
     result = subprocess.run(
-        [sys.executable, "-m", "spicedocs_mcp.server", "/some/path"],
-        capture_output=True,
-        text=True
+        [sys.executable, "-m", "spicedocs_mcp.server", "/some/path"], capture_output=True, text=True
     )
 
     assert result.returncode == 1
@@ -53,7 +51,7 @@ def test_too_many_arguments_rejected():
     result = subprocess.run(
         [sys.executable, "-m", "spicedocs_mcp.server", "arg1", "arg2"],
         capture_output=True,
-        text=True
+        text=True,
     )
 
     assert result.returncode == 1
