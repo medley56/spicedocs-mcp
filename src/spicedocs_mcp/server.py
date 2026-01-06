@@ -469,7 +469,7 @@ async def get_archive_stats() -> str:
         response += f"**Other Files:** {len(other_files)}\n"
         response += f"**Total Files:** {len(html_files) + len(other_files)}\n"
         response += f"**Indexed Pages:** {indexed_pages}\n"
-        response += f"**Total Size:** {total_size / (1024*1024):.1f} MB\n"
+        response += f"**Total Size:** {total_size / (1024 * 1024):.1f} MB\n"
         response += (
             f"**Search Type:** {'Full-text search (FTS5)' if fts_available else 'Basic search'}\n"
         )
