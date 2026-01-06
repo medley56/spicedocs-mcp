@@ -98,7 +98,10 @@ This opens a web interface for testing MCP tools interactively.
 
 ### With Claude Desktop
 
-Add to your Claude Desktop configuration file (`~/.config/Claude/claude_desktop_config.json`):
+Add to your Claude Desktop configuration file:
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Linux: `~/.config/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
