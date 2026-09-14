@@ -227,7 +227,7 @@ for script in soup(["script", "style"]):
     script.decompose()
 
 # Extract clean text
-text_content = ' '.join(soup.get_text().split())
+text_content = " ".join(soup.get_text().split())
 ```
 
 This same pattern is used in `get_page` for retrieving page content.
@@ -267,6 +267,7 @@ init_database(archive_path)
 
 # Test search
 import asyncio
+
 result = asyncio.run(search_archive("ephemeris", limit=5))
 print(result)
 ```
@@ -371,6 +372,7 @@ Use type hints for all function parameters and return values:
 from typing import Optional
 from pathlib import Path
 
+
 def my_function(path: Path, optional: Optional[str] = None) -> str:
     pass
 ```
@@ -410,7 +412,7 @@ Example:
 
 ```python
 try:
-    with open(file_path, 'r') as f:
+    with open(file_path, "r") as f:
         content = f.read()
 except FileNotFoundError:
     logger.error(f"File not found: {file_path}")
