@@ -16,7 +16,7 @@ SpiceDocs MCP is a Model Context Protocol (MCP) server that provides Claude with
 
 ### Architecture
 
-The server is implemented as a single module at [src/spicedocs_mcp/server.py](../src/spicedocs_mcp/server.py) that:
+The server is implemented as a single module at [src/spicedocs_mcp/server.py](src/spicedocs_mcp/server.py) that:
 
 1. Automatically downloads SPICE documentation to a platform-appropriate cache directory
 2. Builds a SQLite database with FTS5 indexing for fast full-text search
@@ -30,18 +30,26 @@ spicedocs-mcp/
 ├── src/
 │   └── spicedocs_mcp/
 │       ├── __init__.py          # Package metadata
-│       ├── server.py            # Main MCP server implementation
-│       └── naif.jpl.nasa.gov/   # Local archive of SPICE documentation (HTML files)
+│       ├── cache.py             # Documentation download and cache management
+│       └── server.py            # Main MCP server implementation
+├── tests/                       # pytest suite (unit + integration)
+├── .claude/
+│   └── settings.json            # Project-scoped Claude Code settings
 ├── .devcontainer/
 │   ├── Dockerfile               # Development container setup
 │   ├── devcontainer.json        # VSCode devcontainer config
-│   ├── setup-dev-environment.sh # Post-create setup script
-│   └── CLAUDE.md                # This file
+│   └── setup-dev-environment.sh # Post-create setup script
+├── .mcp.json                    # Project MCP servers (this server, for testing)
+├── CLAUDE.md                    # This file
 ├── pyproject.toml               # uv project configuration
 ├── uv.lock                      # uv dependency lock file
-├── README.md                    # User-facing documentation
-└── ROADMAP.md                   # Future development plans
+├── CHANGELOG.md                 # Release notes
+├── RELEASE.md                   # Release process
+└── README.md                    # User-facing documentation
 ```
+
+The SPICE documentation itself is not stored in the repository. It is downloaded
+on first run to a platform-appropriate cache directory (see `--cache-dir`).
 
 ## Development Environment
 
@@ -54,14 +62,214 @@ This project uses a VSCode devcontainer with:
 - Git, gh CLI, and development tools
 - Claude Code extension pre-configured
 
-The container automatically runs [setup-dev-environment.sh](./setup-dev-environment.sh) on creation, which:
+The container automatically runs [setup-dev-environment.sh](.devcontainer/setup-dev-environment.sh) on creation, which:
 - Installs Python dependencies via `uv sync`
 - Configures Git authentication (SSH/HTTPS)
 - Sets up GPG commit signing if configured
 
+### Claude Code Configuration
+
+Claude Code configuration for this project lives in three places:
+
+| Location | Tracked in git? | Purpose |
+|----------|-----------------|---------|
+| [CLAUDE.md](CLAUDE.md) | yes | This file. Project instructions, loaded automatically at session start |
+| [.claude/settings.json](.claude/settings.json) | yes | Project-scoped settings (permissions, MCP auto-approval) |
+| `.claude/settings.local.json` | no | Personal overrides, git-ignored |
+| `$CLAUDE_CONFIG_DIR` (`/workspaces/.claude`) | no | User-scoped config, OAuth credentials, session history |
+
+`CLAUDE_CONFIG_DIR` is set to `/workspaces/.claude` in
+[devcontainer.json](.devcontainer/devcontainer.json). This matters because `/workspaces`
+is a Docker volume, while the rest of the container filesystem (including `/root`) is
+disposable. Keeping the config directory on the volume means logins, MCP OAuth
+credentials, and history survive container rebuilds. The directory is created at
+`postCreate` time by [setup-dev-environment.sh](.devcontainer/setup-dev-environment.sh),
+not in the Dockerfile, since the volume mount would shadow anything the image created.
+
+To confirm the volume backing:
+
+```bash
+findmnt -T /workspaces -o TARGET,SOURCE,FSTYPE
+```
+
+### Documentation Cache
+
+For the same reason, `SPICEDOCS_CACHE_DIR` is set to `/workspaces/.cache/spicedocs-mcp`
+in [devcontainer.json](.devcontainer/devcontainer.json). The default cache location
+(`~/.cache/spicedocs-mcp`, i.e. `/root/.cache/...` in this container) is on the
+disposable container filesystem, which means every rebuild would re-download ~28MB of
+NAIF documentation and rebuild the index. Putting it on the volume makes rebuilds cheap.
+
+`SPICEDOCS_CACHE_DIR` is read by `get_cache_dir` in
+[cache.py](src/spicedocs_mcp/cache.py) and is used verbatim as the cache directory. Note
+that the download staging directory is created as a sibling
+(`/workspaces/.cache/.spicedocs-download-tmp`), so the parent must be writable.
+
+```bash
+uv run spicedocs-mcp --cache-dir     # Confirm the active cache location
+uv run spicedocs-mcp --refresh       # Re-download into it
+```
+
+### Project MCP Servers
+
+[.mcp.json](.mcp.json) registers this server with Claude Code so the tools can be
+exercised in the same session used to develop them:
+
+```json
+{
+  "mcpServers": {
+    "spicedocs": {
+      "type": "stdio",
+      "command": "uv",
+      "args": ["run", "spicedocs-mcp"],
+      "env": {}
+    }
+  }
+}
+```
+
+MCP servers launch with the project root as their working directory, so `uv run` picks
+up this project's environment without an explicit path.
+
+The tools then appear as `mcp__spicedocs__search_archive`,
+`mcp__spicedocs__get_page`, and so on. The `permissions.allow` list in
+[.claude/settings.json](.claude/settings.json) pre-approves the individual
+`mcp__spicedocs__*` tool calls, so they run without prompting.
+
+**Approving the server itself is a separate, per-user step.** `.mcp.json` is committed,
+executable config, so Claude Code will not let a committed settings file approve it —
+that would mean cloning any repo auto-runs whatever it declares. In particular
+`enableAllProjectMcpServers` is **not** honored from a tracked file, which is why
+[.claude/settings.json](.claude/settings.json) deliberately does not set it; with the
+server unapproved, `claude mcp list` reports `spicedocs: ⏸ Pending approval`. Approval
+has to come from somewhere outside the repo, either
+
+- run `claude` in the repo root once and accept the trust prompt, which records the
+  approval in `$CLAUDE_CONFIG_DIR/.claude.json`, or
+- set the key in your own git-ignored `.claude/settings.local.json`:
+
+  ```json
+  { "enableAllProjectMcpServers": true }
+  ```
+
+Either is a one-time action per config directory. Since `CLAUDE_CONFIG_DIR` lives on the
+`/workspaces` volume, it survives container rebuilds. `.claude/settings.local.json` is
+yours to manage — nothing in the devcontainer setup writes or overwrites it.
+
+Useful commands:
+
+```bash
+claude mcp list              # Show configured servers and health-check them
+claude mcp get spicedocs     # Show details for one server
+```
+
+Note that a Claude Code session loads MCP servers at startup. After changing
+[server.py](src/spicedocs_mcp/server.py), restart the session (or use `/mcp` to
+reconnect) before the new tool definitions are visible.
+
+### GitHub MCP Server (OAuth GitHub App)
+
+The GitHub MCP server is authenticated with an OAuth-capable GitHub App rather than a
+personal access token. This cannot be committed to [.mcp.json](.mcp.json): the client
+secret is written to `$CLAUDE_CONFIG_DIR/.credentials.json` (under
+`mcpOAuthClientConfig`) and the resulting OAuth tokens are cached there too, so the
+setup has to be run interactively once per config directory. Because
+`CLAUDE_CONFIG_DIR` is on the `/workspaces` volume, "once" means once per volume, not
+once per container rebuild.
+
+**1. Create the GitHub App**
+
+Under GitHub *Settings → Developer settings → GitHub Apps → New GitHub App*:
+
+- **Callback URL**: `http://localhost:7878/callback` — this must match the
+  `callbackPort` used below exactly. Claude Code otherwise picks a random port each
+  time, which a pre-registered redirect URI cannot accommodate.
+- **Request user authorization (OAuth) during installation**: enabled
+- **Webhook**: disabled
+- **Permissions**: whatever the work requires (typically Contents, Issues, Pull
+  requests, Metadata — read or read/write)
+
+Generate a client secret on the app's settings page and note the client ID
+(`Iv23li…`). Then install the app on the account or org whose repositories it should
+reach; an app that is never installed authenticates fine but sees nothing.
+
+**2. Register the server in the devcontainer**
+
+```bash
+# Read the secret into the environment rather than passing it as an argument,
+# so it does not land in shell history
+read -rs MCP_CLIENT_SECRET && export MCP_CLIENT_SECRET
+
+claude mcp add-json --client-secret --scope user github-mcp '{
+  "type": "http",
+  "url": "https://api.githubcopilot.com/mcp/x/all",
+  "oauth": {
+    "clientId": "Iv23liYOURCLIENTID",
+    "callbackPort": 7878
+  }
+}'
+
+unset MCP_CLIENT_SECRET
+```
+
+`--client-secret` reads `MCP_CLIENT_SECRET` if it is set and prompts otherwise. Use
+`--scope user` to make the server available in every project in this container;
+`--scope local` limits it to this project. Either way the entry is stored in
+`$CLAUDE_CONFIG_DIR/.claude.json` and the secret in
+`$CLAUDE_CONFIG_DIR/.credentials.json`.
+
+The `oauth` block must be nested exactly as shown. A flat top-level `client_id` key is
+silently discarded: the server registers and looks healthy, but has no OAuth
+configuration attached.
+
+**Toolset endpoints.** The URL selects which tools are exposed:
+
+| URL | Tools |
+|-----|-------|
+| `https://api.githubcopilot.com/mcp/x/all` | Everything |
+| `https://api.githubcopilot.com/mcp/` | Default toolset only (a subset) |
+| `https://api.githubcopilot.com/mcp/x/<toolset>` | One toolset, e.g. `issues`, `repos` |
+| `…/readonly` | Appending `/readonly` to any of the above drops the write tools |
+
+Note that the client secret is stored under a key derived from the **server URL**
+(`github-mcp|<hash>` in `mcpOAuthClientConfig`), not from the project directory. Switching
+endpoints later — say from `/mcp/x/all` to `/mcp/x/issues` — therefore needs the
+`add-json` step re-run with the secret; editing the URL in `.claude.json` by hand
+leaves the credential keyed to the old URL and the server unable to authenticate.
+
+The equivalent flag form, if the JSON is awkward to quote:
+
+```bash
+claude mcp add --transport http --scope user \
+  --client-id Iv23liYOURCLIENTID --client-secret --callback-port 7878 \
+  github-mcp https://api.githubcopilot.com/mcp/x/all
+```
+
+**3. Complete the OAuth flow**
+
+```bash
+claude mcp login github-mcp
+```
+
+This opens a browser on the host and redirects back to `localhost:7878`. VSCode
+normally auto-forwards the port; `forwardPorts` in
+[devcontainer.json](.devcontainer/devcontainer.json) declares it explicitly so the
+callback is not lost. Tokens are cached in `$CLAUDE_CONFIG_DIR/.credentials.json` and
+refreshed automatically.
+
+Verify, and re-run the login if the token is ever rejected:
+
+```bash
+claude mcp get github-mcp      # Should report connected
+claude mcp logout github-mcp   # Clear cached tokens, then log in again
+```
+
+Rotating the client secret in GitHub requires re-running step 2; the `add-json` call
+overwrites the existing entry.
+
 ### Dependencies
 
-All dependencies are managed through uv and specified in [pyproject.toml](../pyproject.toml):
+All dependencies are managed through uv and specified in [pyproject.toml](pyproject.toml):
 - `beautifulsoup4>=4.12.0,<5.0.0` - HTML parsing
 - `mcp>=1.0.0,<2.0.0` - MCP protocol library
 - `fastmcp>=2.0.0,<3.0.0` - MCP server framework
@@ -174,7 +382,7 @@ The server exposes 5 tools to Claude:
 
 ### Adding a New MCP Tool
 
-1. Add a new function decorated with `@mcp.tool()` in [server.py](../src/spicedocs_mcp/server.py)
+1. Add a new function decorated with `@mcp.tool()` in [server.py](src/spicedocs_mcp/server.py)
 2. Include comprehensive docstring with Args and Returns sections
 3. Use type hints for all parameters
 4. Return string responses (MCP tools must return strings)
@@ -202,7 +410,7 @@ async def my_new_tool(param: str, optional_param: int = 10) -> str:
 
 ### Modifying Search Behavior
 
-Search logic is in the `search_archive` function at [server.py:136](../src/spicedocs_mcp/server.py#L136).
+Search logic is in the `search_archive` function at [server.py:136](src/spicedocs_mcp/server.py#L136).
 
 FTS5 search uses BM25 ranking:
 ```python
@@ -217,7 +425,7 @@ WHERE title LIKE ? OR content LIKE ?
 
 ### HTML Parsing and Text Extraction
 
-Text extraction logic is in `index_file` at [server.py:89](../src/spicedocs_mcp/server.py#L89):
+Text extraction logic is in `index_file` at [server.py:89](src/spicedocs_mcp/server.py#L89):
 
 ```python
 # Remove script and style tags
@@ -315,7 +523,7 @@ SELECT path, title FROM pages_fts WHERE pages_fts MATCH 'ephemeris' LIMIT 5;
 
 ### Project Configuration
 
-The project uses uv's build system. Key configuration in [pyproject.toml](../pyproject.toml):
+The project uses uv's build system. Key configuration in [pyproject.toml](pyproject.toml):
 
 ```toml
 [project]
@@ -428,7 +636,7 @@ except Exception as e:
 uv add package-name
 ```
 
-This updates [pyproject.toml](../pyproject.toml) and regenerates [uv.lock](../uv.lock).
+This updates [pyproject.toml](pyproject.toml) and regenerates [uv.lock](uv.lock).
 
 ### Update all dependencies
 
@@ -498,19 +706,17 @@ Example valid paths:
 ### Server won't start in Claude Desktop
 
 1. Check the JSON syntax in `claude_desktop_config.json`
-2. Ensure the `cwd` directory exists and contains [pyproject.toml](../pyproject.toml)
+2. Ensure the `cwd` directory exists and contains [pyproject.toml](pyproject.toml)
 3. Check Claude Desktop logs for startup errors
 4. Test the server command manually in a terminal
 5. Check network connection on first run (documentation needs to be downloaded)
 
 ## Future Development
 
-See [ROADMAP.md](../ROADMAP.md) for planned features:
-
-1. **GitHub Repository** - Clean git history and publish to GitHub
-2. **Clean up UV Management** - Simplify pyproject.toml for uvx installation
-3. **Add Basic Tests** - Integration tests with GitHub Actions workflow
-4. **Improved User Documentation** - Setup guides for uvx installation
+Planned work is tracked as GitHub issues on
+[medley56/spicedocs-mcp](https://github.com/medley56/spicedocs-mcp/issues).
+Released changes are recorded in [CHANGELOG.md](CHANGELOG.md), and the release
+process is documented in [RELEASE.md](RELEASE.md).
 
 ## Additional Resources
 
@@ -556,12 +762,14 @@ Examples:
 
 When working on this project:
 
-- Always read [server.py](../src/spicedocs_mcp/server.py) before making changes
+- Always read [server.py](src/spicedocs_mcp/server.py) before making changes
 - Test changes manually before suggesting them
-- Keep the single-file architecture (don't split into multiple modules)
+- Keep the module layout flat: MCP tools live in `server.py`, cache/download
+  logic lives in `cache.py`. Don't add further modules without a good reason
 - Maintain backward compatibility with existing MCP tool signatures
 - Use path traversal protection for all file operations
 - Log informational messages to stderr using the logger
 - Return descriptive error strings from MCP tools (don't raise exceptions)
 - Keep dependencies minimal (only add if truly necessary)
-- Update [README.md](../README.md) when adding new features or changing usage
+- Update [README.md](README.md) when adding new features or changing usage
+- Run `pre-commit run --all-files` and `uv run pytest tests/ -v` before committing

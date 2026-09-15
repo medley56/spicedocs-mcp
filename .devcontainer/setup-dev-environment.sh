@@ -2,6 +2,12 @@
 
 # Set up the development environment
 
+# Ensure the Claude Code config directory exists.
+# CLAUDE_CONFIG_DIR is set to /workspaces/.claude in devcontainer.json. /workspaces is a
+# Docker volume, so config, MCP OAuth credentials (.credentials.json) and command history
+# persist across container rebuilds instead of being lost with the container filesystem.
+mkdir -p "${CLAUDE_CONFIG_DIR:-/workspaces/.claude}"
+
 # Install uv dependencies
 uv sync --all-extras
 

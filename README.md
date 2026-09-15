@@ -230,6 +230,8 @@ Documentation is cached in platform-appropriate directories:
 - **macOS**: `~/Library/Caches/spicedocs-mcp`
 - **Windows**: `%LOCALAPPDATA%\spicedocs\spicedocs-mcp\Cache`
 
+Set the `SPICEDOCS_CACHE_DIR` environment variable to override the location.
+
 To see your cache location:
 ```bash
 uvx --from git+https://github.com/medley56/spicedocs-mcp@1.0.0 spicedocs-mcp --cache-dir
@@ -343,6 +345,18 @@ pipx install pre-commit
 # Install the git hooks
 pre-commit install
 ```
+
+### Developing in the Devcontainer
+
+This repository includes a VSCode devcontainer that provisions Python 3.12, uv, SQLite
+with FTS5, and Claude Code. Open the repository in VSCode and choose
+*Reopen in Container*; [setup-dev-environment.sh](.devcontainer/setup-dev-environment.sh)
+installs dependencies and pre-commit hooks automatically.
+
+A [.mcp.json](.mcp.json) at the repository root registers this server with Claude Code,
+so its tools can be exercised from within the development session. See
+[CLAUDE.md](CLAUDE.md) for details on the container's Claude Code configuration,
+including how to set up the GitHub MCP server.
 
 ### Code Quality Tools
 
