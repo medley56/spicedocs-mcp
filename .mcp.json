@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "spicedocs": {
+      "type": "stdio",
+      "command": "uv",
+      "args": ["run", "spicedocs-mcp"],
+      "env": {}
+    }
+  }
+}

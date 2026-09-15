@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "enableAllProjectMcpServers": true,
+  "permissions": {
+    "allow": [
+      "Bash(uv run pytest:*)",
+      "Bash(uv run ruff:*)",
+      "Bash(uv run mypy:*)",
+      "Bash(uv run spicedocs-mcp:*)",
+      "Bash(uv sync:*)",
+      "Bash(uv lock:*)",
+      "Bash(pre-commit run:*)",
+      "Bash(sqlite3:*)",
+      "mcp__spicedocs__search_archive",
+      "mcp__spicedocs__get_page",
+      "mcp__spicedocs__list_pages",
+      "mcp__spicedocs__extract_links",
+      "mcp__spicedocs__get_archive_stats"
+    ]
+  }
+}

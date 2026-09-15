@@ -44,9 +44,6 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 
 RUN mkdir -p /usr/local/share/npm-global
 
-# Create config directory and set permissions
-RUN mkdir -p /root/.claude
-
 # Install global packages
 ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
 ENV PATH=$PATH:/usr/local/share/npm-global/bin
@@ -76,5 +73,7 @@ USER root
 COPY setup-dev-environment.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/setup-dev-environment.sh
 
-# Copy CLAUDE.md and settings to Claude config directory
-COPY CLAUDE.md /root/.claude/
+# Claude Code configuration lives in CLAUDE_CONFIG_DIR (/workspaces/.claude), which is
+# backed by the /workspaces volume so it survives container rebuilds. It is created by
+# setup-dev-environment.sh at postCreate rather than baked into the image, because the
+# volume mount would shadow anything created here at build time.

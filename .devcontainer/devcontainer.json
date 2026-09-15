@@ -43,10 +43,14 @@
       }
     }
   },
+  // Fixed port for the MCP OAuth callback (see the GitHub MCP section in CLAUDE.md).
+  // The GitHub App redirect URI is http://localhost:33418/callback.
+  "forwardPorts": [33418],
   "remoteUser": "root",
   "remoteEnv": {
     "NODE_OPTIONS": "--max-old-space-size=4096",
-    "CLAUDE_CONFIG_DIR": "/root/.claude",
+    "CLAUDE_CONFIG_DIR": "/workspaces/.claude",
+    "SPICEDOCS_CACHE_DIR": "/workspaces/.cache/spicedocs-mcp",
     "POWERLEVEL9K_DISABLE_GITSTATUS": "true",
     "COMMIT_GPGSIGN": "true",
     "TAG_GPGSIGN": "true"
