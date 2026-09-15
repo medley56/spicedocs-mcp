@@ -132,9 +132,31 @@ MCP servers launch with the project root as their working directory, so `uv run`
 up this project's environment without an explicit path.
 
 The tools then appear as `mcp__spicedocs__search_archive`,
-`mcp__spicedocs__get_page`, and so on. `enableAllProjectMcpServers` is set in
-[.claude/settings.json](.claude/settings.json), so the server is approved without a
-prompt. Useful commands:
+`mcp__spicedocs__get_page`, and so on. The `permissions.allow` list in
+[.claude/settings.json](.claude/settings.json) pre-approves the individual
+`mcp__spicedocs__*` tool calls, so they run without prompting.
+
+**Approving the server itself is a separate, per-user step.** `.mcp.json` is committed,
+executable config, so Claude Code will not let a committed settings file approve it —
+that would mean cloning any repo auto-runs whatever it declares. In particular
+`enableAllProjectMcpServers` is **not** honored from a tracked file, which is why
+[.claude/settings.json](.claude/settings.json) deliberately does not set it; with the
+server unapproved, `claude mcp list` reports `spicedocs: ⏸ Pending approval`. Approval
+has to come from somewhere outside the repo, either
+
+- run `claude` in the repo root once and accept the trust prompt, which records the
+  approval in `$CLAUDE_CONFIG_DIR/.claude.json`, or
+- set the key in your own git-ignored `.claude/settings.local.json`:
+
+  ```json
+  { "enableAllProjectMcpServers": true }
+  ```
+
+Either is a one-time action per config directory. Since `CLAUDE_CONFIG_DIR` lives on the
+`/workspaces` volume, it survives container rebuilds. `.claude/settings.local.json` is
+yours to manage — nothing in the devcontainer setup writes or overwrites it.
+
+Useful commands:
 
 ```bash
 claude mcp list              # Show configured servers and health-check them
@@ -159,7 +181,7 @@ once per container rebuild.
 
 Under GitHub *Settings → Developer settings → GitHub Apps → New GitHub App*:
 
-- **Callback URL**: `http://localhost:33418/callback` — this must match the
+- **Callback URL**: `http://localhost:7878/callback` — this must match the
   `callbackPort` used below exactly. Claude Code otherwise picks a random port each
   time, which a pre-registered redirect URI cannot accommodate.
 - **Request user authorization (OAuth) during installation**: enabled
@@ -183,7 +205,7 @@ claude mcp add-json --client-secret --scope user github-mcp '{
   "url": "https://api.githubcopilot.com/mcp/x/all",
   "oauth": {
     "clientId": "Iv23liYOURCLIENTID",
-    "callbackPort": 33418
+    "callbackPort": 7878
   }
 }'
 
@@ -219,7 +241,7 @@ The equivalent flag form, if the JSON is awkward to quote:
 
 ```bash
 claude mcp add --transport http --scope user \
-  --client-id Iv23liYOURCLIENTID --client-secret --callback-port 33418 \
+  --client-id Iv23liYOURCLIENTID --client-secret --callback-port 7878 \
   github-mcp https://api.githubcopilot.com/mcp/x/all
 ```
 
@@ -229,7 +251,7 @@ claude mcp add --transport http --scope user \
 claude mcp login github-mcp
 ```
 
-This opens a browser on the host and redirects back to `localhost:33418`. VSCode
+This opens a browser on the host and redirects back to `localhost:7878`. VSCode
 normally auto-forwards the port; `forwardPorts` in
 [devcontainer.json](.devcontainer/devcontainer.json) declares it explicitly so the
 callback is not lost. Tokens are cached in `$CLAUDE_CONFIG_DIR/.credentials.json` and

@@ -44,8 +44,8 @@
     }
   },
   // Fixed port for the MCP OAuth callback (see the GitHub MCP section in CLAUDE.md).
-  // The GitHub App redirect URI is http://localhost:33418/callback.
-  "forwardPorts": [33418],
+  // The GitHub App redirect URI is http://localhost:7878/callback.
+  "forwardPorts": [7878],
   "remoteUser": "root",
   "remoteEnv": {
     "NODE_OPTIONS": "--max-old-space-size=4096",
